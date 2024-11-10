@@ -78,8 +78,8 @@ async function initPhysics() {
 				},
 				restitution: 0.7,
 				friction: 0.01,
-				frictionAir: 0.001,
-				density: 0.001, // Adjusted for better physics with actual sizes
+				frictionAir: 0.005,
+				density: 0.002, // Adjusted for better physics with actual sizes
 				slop: 0,
 				chamfer: { radius: 2 }
 			}
@@ -224,9 +224,10 @@ const phrases = [
   //----------------------------UPGRADE-ANIMATION ---------------------------------//
   function initUpgradeAnimation() {
     const container = document.querySelector('.container');
-    const numIcons = 4; // Number of icons to animate
+    const numIcons = 3;
     let currentIcon = 0;
-    const animationDuration = 5000; // 5 seconds duration to match CSS
+    const iconDelay = 400; // Reduced to 300ms
+    const animationDuration = 1600;
 
     function createIcon(type, number) {
         const icon = document.createElement('img');
@@ -236,41 +237,116 @@ const phrases = [
         return icon;
     }
 
-    function animateNextPair() {
+    function animateSequence() {
         if (currentIcon >= numIcons) {
-            currentIcon = 0; // Reset to create infinite loop
+            currentIcon = 0;
         }
 
-        // Create and animate icon moving to laptop
-        const iconBefore = createIcon('before', currentIcon + 1);
-        container.appendChild(iconBefore);
-        iconBefore.classList.add('moving-to-laptop');
-
-        // Create and animate upgraded icon when the first animation is about to finish
-        setTimeout(() => {
-            const iconAfter = createIcon('after', currentIcon + 1);
-            container.appendChild(iconAfter);
-            iconAfter.classList.add('moving-from-laptop');
-
-            // Clean up icons after animation
+        // Animate icons moving to laptop
+        for (let i = 0; i < 3; i++) {
             setTimeout(() => {
-                iconBefore.remove();
-                iconAfter.remove();
-            }, animationDuration);
-        }, animationDuration - 100); // Start slightly before first animation ends
+                const iconBefore = createIcon('before', currentIcon + 1);
+                container.appendChild(iconBefore);
+                
+                requestAnimationFrame(() => {
+                    iconBefore.classList.add('moving-to-laptop');
+                    iconBefore.style.animationDelay = `${i * 0.1}s`; // Add slight delay for spacing
+                });
+                
+                setTimeout(() => {
+                    iconBefore.remove();
+                }, animationDuration + 100);
+            }, i * iconDelay);
+        }
+
+        const afterSequenceDelay = iconDelay * 6; // Reduced delay
+        
+        // Animate icons moving from laptop
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                const iconAfter = createIcon('after', currentIcon + 1);
+                container.appendChild(iconAfter);
+                
+                requestAnimationFrame(() => {
+                    iconAfter.classList.add('moving-from-laptop');
+                    iconAfter.style.animationDelay = `${i * 0.1}s`; // Add slight delay for spacing
+                });
+                
+                setTimeout(() => {
+                    iconAfter.remove();
+                }, animationDuration + 100);
+            }, afterSequenceDelay + (i * iconDelay));
+        }
 
         currentIcon++;
 
-        // Schedule next pair with some delay between pairs
-        setTimeout(animateNextPair, animationDuration + 2000); // 2 second gap between pairs
+        const totalDuration = afterSequenceDelay + (3 * iconDelay) + animationDuration;
+        setTimeout(animateSequence, totalDuration);
     }
 
-    // Start the animation cycle
-    setTimeout(animateNextPair, 1000); // Start after a 1-second initial delay
+    setTimeout(animateSequence, 1000);
 }
 
-// Add the initialization call at the end of your existing DOMContentLoaded event
+// Add the initialization call
 document.addEventListener('DOMContentLoaded', () => {
     initPhysics();
     initUpgradeAnimation();
+});
+
+
+//---------------------------------------FEED-ANIMTAION--------------------------//
+document.addEventListener('DOMContentLoaded', () => {
+    const feedItems = document.querySelectorAll('.feed img');
+    let lastScrollTop = 0;
+    
+    function updatePerspective() {
+        const scrollTop = window.scrollY;
+        const scrollDiff = scrollTop - lastScrollTop;
+        const windowHeight = window.innerHeight;
+        
+        feedItems.forEach((item, index) => {
+            const rect = item.getBoundingClientRect();
+            const elementTop = rect.top;
+            
+            // Calculate position relative to viewport
+            const viewportPosition = elementTop / windowHeight;
+            
+            // Base transforms that create the ladder effect
+            const baseScale = 1 + (viewportPosition * 0.6); // Items get larger as they go up
+            const baseTranslateZ = -viewportPosition * 1000; // Items get more distant as they go up
+            const baseRotateX = 20 + (viewportPosition * 0); // Increased rotation for distant items
+            
+            // Apply scroll influence
+            const scrollInfluence = scrollDiff * 0.3;
+            
+            // Combine base transforms with scroll influence
+            const scale = baseScale;
+            const translateZ = baseTranslateZ - scrollInfluence;
+            const rotateX = baseRotateX;
+            const translateY = -viewportPosition * 100; // Adjust vertical spacing
+            
+            // Apply the transformation
+            item.style.transform = `
+                translate3d(0, ${translateY}px, ${translateZ}px)
+                rotateX(${rotateX}deg)
+                scale(${scale})
+            `;
+            
+            // Adjust opacity based on position
+            item.style.opacity = Math.max(0.4, 1 - Math.abs(viewportPosition));
+        });
+        
+        lastScrollTop = scrollTop;
+    }
+    
+    // Initial update
+    updatePerspective();
+    
+    // Update on scroll
+    window.addEventListener('scroll', () => {
+        requestAnimationFrame(updatePerspective);
+    });
+    
+    // Update on resize
+    window.addEventListener('resize', updatePerspective);
 });
