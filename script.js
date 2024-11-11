@@ -296,64 +296,145 @@ document.addEventListener('DOMContentLoaded', () => {
 
 //---------------------------------------FEED-ANIMTAION--------------------------//
 document.addEventListener('DOMContentLoaded', () => {
-	const feed = document.querySelector('.feed');
-	const items = Array.from(feed.getElementsByTagName('img'));
-	const itemHeight = 200; // Height of each item
-	const spacing = -200; // No gap between items
-	
-	// Position items initially
-	items.forEach((item, index) => {
-		item.style.top = `${index * (itemHeight + spacing)}px`;
-	});
+    const feeds = document.querySelectorAll('.feed');
+    
+    feeds.forEach(feed => {
+        const items = Array.from(feed.getElementsByTagName('img'));
+        
+        // Enhanced smooth transitions
+        items.forEach(item => {
+            item.style.transition = 'transform 0.8s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
+            item.style.willChange = 'transform, opacity';
+            item.style.transformOrigin = 'bottom center';
+            // Reduce margin to create tighter spacing
+            item.style.margin = '-22px 0'; // Adjust this value to control spacing
+        });
 
-	// Calculate total scroll range
-	const totalHeight = items.length * (itemHeight + spacing);
-	feed.style.height = `${totalHeight}px`;
+        // Smooth easing function
+        const easeOutQuint = t => 1 + (--t) * t * t * t * t;
+        
+        // Enhanced interpolation
+        const smoothInterpolate = (start, end, factor) => {
+            const ease = easeOutQuint(factor);
+            return start + (end - start) * ease;
+        };
 
-	// Scroll handler
-	window.addEventListener('scroll', () => {
-		const scrollPosition = window.scrollY - feed.offsetTop;
-		const viewportCenter = window.innerHeight / 2;
-		
-		items.forEach((item, index) => {
-			// Calculate the ideal position for this item
-			const itemScrollPosition = index * (itemHeight + spacing);
-			
-			// Calculate how far this item is from the center of the viewport
-			const difference = scrollPosition - itemScrollPosition;
-			
-			if (difference > -window.innerHeight && difference < window.innerHeight) {
-				// Only scale down items above the current main item
-				const rect = item.getBoundingClientRect();
-				const windowHeight = window.innerHeight;
-				const elementTop = rect.top;
-				const viewportPosition = elementTop / windowHeight;
-            
-            // Base transforms that create the ladder effect
-            const scale = 1 + (viewportPosition * 0.2);
-				
-				// Calculate vertical movement
-				const move = Math.min(0, difference * 0.3);
-				
-				// Apply transformations
-				item.style.transform = `
-					translateY(${-move}px)
-					scale(${scale})
-					rotateX(15deg)
-				`;
-				
-				// Adjust opacity for items above the current one
-				const opacity = difference > 0 
-					? Math.max(0.7, 1 - (difference / window.innerHeight) * 0.3)
-					: 1;
-				item.style.opacity = opacity;
-			}
-		});
-	});
+        // Track scroll velocity
+        let lastScrollTop = window.pageYOffset;
+        let scrollVelocity = 0;
+        const velocityDamping = 0.9;
+        
+        // Scroll handler with enhanced scaling pattern
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    const currentScrollTop = window.pageYOffset;
+                    scrollVelocity = (currentScrollTop - lastScrollTop) * 0.1;
+                    lastScrollTop = currentScrollTop;
+                    
+                    const feedRect = feed.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+                    
+                    if (feedRect.top < windowHeight && feedRect.bottom > 0) {
+                        items.forEach((item, index) => {
+                            const rect = item.getBoundingClientRect();
+                            const elementCenter = rect.top + rect.height / 2;
+                            
+                            // Calculate position relative to viewport
+                            const viewportPosition = elementCenter / windowHeight;
+                            
+                            // Enhanced scale calculation based on position
+                            // Top items smaller, middle items medium, bottom items larger
+                            let targetScale;
+                            if (viewportPosition <= 0.3) {
+                                // Top items (smaller)
+                                targetScale = 0.7 + (viewportPosition * 0.5);
+                            } else if (viewportPosition <= 0.7) {
+                                // Middle items (medium)
+                                targetScale = 0.85 + ((viewportPosition - 0.3) * 0.3);
+                            } else {
+                                // Bottom items (larger)
+                                targetScale = 1 + ((viewportPosition - 0.7) * 0.2);
+                            }
 
-	// Trigger initial positioning
-	window.dispatchEvent(new Event('scroll'));
+                            // Apply velocity influence to scale
+                            const velocityScale = 1 + (Math.abs(scrollVelocity) * 0.001);
+                            const scale = targetScale * velocityScale;
+
+                            // Enhanced parallax movement
+                            const parallaxStrength = 120; // Increased for more dramatic effect
+                            const baseParallax = (viewportPosition - 0.5) * parallaxStrength;
+                            const velocityParallax = scrollVelocity * 0.3;
+                            
+                            // Calculate rotation (reduced for subtler effect)
+                            const baseRotation = 15;
+                            const rotationOffset = (viewportPosition - 0.5) * 5;
+                            const rotation = baseRotation + rotationOffset;
+
+                            // Z-translation for enhanced depth
+                            const zTranslation = (viewportPosition - 0.5) * -100;
+
+                            // Combine transforms
+                            const transform = `
+                                translate3d(0, ${baseParallax + velocityParallax}px, ${zTranslation}px)
+                                scale(${scale})
+                                rotateX(${rotation}deg)
+                            `;
+                            
+                            // Opacity based on position
+                            const opacity = smoothInterpolate(0.6, 1, 1 - Math.abs(viewportPosition - 0.5));
+                            
+                            // Apply styles with dynamic transitions
+                            item.style.transform = transform;
+                            item.style.opacity = opacity;
+                            
+                            // Adjust transition speed based on velocity
+                            const transitionDuration = 0.8 - (Math.abs(scrollVelocity) * 0.001);
+                            item.style.transition = `
+                                transform ${transitionDuration}s cubic-bezier(0.23, 1, 0.32, 1),
+                                opacity ${transitionDuration}s cubic-bezier(0.23, 1, 0.32, 1)
+                            `;
+                        });
+                    }
+                    
+                    scrollVelocity *= velocityDamping;
+                    ticking = false;
+                });
+                
+                ticking = true;
+            }
+        }, { passive: true });
+    });
+
+    // Initialize positions
+    window.dispatchEvent(new Event('scroll'));
 });
+
+// Add enhanced CSS
+const style = document.createElement('style');
+style.textContent = `
+    .feed{
+        overflow: visible !important;
+        padding: 20vh 0; /* Add padding to account for parallax movement */
+    }
+    
+    .feed img{
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+        pointer-events: none;
+        transform-origin: bottom center;
+        display: block;
+
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+        .feed img {
+            transition: transform 0.1s linear, opacity 0.1s linear;
+        }
+    }
+`;
+document.head.appendChild(style);
 
 
 ////
@@ -412,3 +493,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // 	setupItems();
 // 	requestAnimationFrame(animateItems);
 //   });
+
+//////////////////
+window.scroll({
+	top: 2500, 
+	left: 0, 
+	behavior: 'smooth'
+  });
+  
+  // Scroll certain amounts from current position 
+  window.scrollBy({ 
+	top: 100, // could be negative value
+	left: 0, 
+	behavior: 'smooth' 
+  });
+  
+  // Scroll to a certain element
+  document.querySelector('.hello').scrollIntoView({ 
+	behavior: 'smooth' 
+  });
