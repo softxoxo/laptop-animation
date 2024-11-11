@@ -296,57 +296,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
 //---------------------------------------FEED-ANIMTAION--------------------------//
 document.addEventListener('DOMContentLoaded', () => {
-    const feedItems = document.querySelectorAll('.feed img');
-    let lastScrollTop = 0;
-    
-    function updatePerspective() {
-        const scrollTop = window.scrollY;
-        const scrollDiff = scrollTop - lastScrollTop;
-        const windowHeight = window.innerHeight;
-        
-        feedItems.forEach((item, index) => {
-            const rect = item.getBoundingClientRect();
-            const elementTop = rect.top;
-            
-            // Calculate position relative to viewport
-            const viewportPosition = elementTop / windowHeight;
+	const feed = document.querySelector('.feed');
+	const items = Array.from(feed.getElementsByTagName('img'));
+	const itemHeight = 200; // Height of each item
+	const spacing = -200; // No gap between items
+	
+	// Position items initially
+	items.forEach((item, index) => {
+		item.style.top = `${index * (itemHeight + spacing)}px`;
+	});
+
+	// Calculate total scroll range
+	const totalHeight = items.length * (itemHeight + spacing);
+	feed.style.height = `${totalHeight}px`;
+
+	// Scroll handler
+	window.addEventListener('scroll', () => {
+		const scrollPosition = window.scrollY - feed.offsetTop;
+		const viewportCenter = window.innerHeight / 2;
+		
+		items.forEach((item, index) => {
+			// Calculate the ideal position for this item
+			const itemScrollPosition = index * (itemHeight + spacing);
+			
+			// Calculate how far this item is from the center of the viewport
+			const difference = scrollPosition - itemScrollPosition;
+			
+			if (difference > -window.innerHeight && difference < window.innerHeight) {
+				// Only scale down items above the current main item
+				const rect = item.getBoundingClientRect();
+				const windowHeight = window.innerHeight;
+				const elementTop = rect.top;
+				const viewportPosition = elementTop / windowHeight;
             
             // Base transforms that create the ladder effect
-            const baseScale = 1 + (viewportPosition * 0.6); // Items get larger as they go up
-            const baseTranslateZ = -viewportPosition * 1000; // Items get more distant as they go up
-            const baseRotateX = 20 + (viewportPosition * 0); // Increased rotation for distant items
-            
-            // Apply scroll influence
-            const scrollInfluence = scrollDiff * 0.3;
-            
-            // Combine base transforms with scroll influence
-            const scale = baseScale;
-            const translateZ = baseTranslateZ - scrollInfluence;
-            const rotateX = baseRotateX;
-            const translateY = -viewportPosition * 100; // Adjust vertical spacing
-            
-            // Apply the transformation
-            item.style.transform = `
-                translate3d(0, ${translateY}px, ${translateZ}px)
-                rotateX(${rotateX}deg)
-                scale(${scale})
-            `;
-            
-            // Adjust opacity based on position
-            item.style.opacity = Math.max(0.4, 1 - Math.abs(viewportPosition));
-        });
-        
-        lastScrollTop = scrollTop;
-    }
-    
-    // Initial update
-    updatePerspective();
-    
-    // Update on scroll
-    window.addEventListener('scroll', () => {
-        requestAnimationFrame(updatePerspective);
-    });
-    
-    // Update on resize
-    window.addEventListener('resize', updatePerspective);
+            const scale = 1 + (viewportPosition * 0.2);
+				
+				// Calculate vertical movement
+				const move = Math.min(0, difference * 0.3);
+				
+				// Apply transformations
+				item.style.transform = `
+					translateY(${-move}px)
+					scale(${scale})
+					rotateX(15deg)
+				`;
+				
+				// Adjust opacity for items above the current one
+				const opacity = difference > 0 
+					? Math.max(0.7, 1 - (difference / window.innerHeight) * 0.3)
+					: 1;
+				item.style.opacity = opacity;
+			}
+		});
+	});
+
+	// Trigger initial positioning
+	window.dispatchEvent(new Event('scroll'));
 });
+
+
+////
+// document.addEventListener('DOMContentLoaded', () => {
+// 	const feed2 = document.querySelector('.feed2');
+// 	const items = Array.from(feed2.getElementsByTagName('img'));
+// 	const itemHeight = 200;
+// 	const animationDuration = 6000; // 3 seconds for one complete cycle
+  
+// 	// Clone items and set initial positions
+// 	function setupItems() {
+// 	  items.forEach((item, index) => {
+// 		item.style.top = `${index * itemHeight}px`;
+		
+// 		// Create data attributes for animation tracking
+// 		item.dataset.initialPosition = index * itemHeight;
+// 		item.dataset.currentPosition = index * itemHeight;
+// 	  });
+// 	}
+  
+// 	function animateItems() {
+// 	  items.forEach((item, index) => {
+// 		const currentPos = parseFloat(item.dataset.currentPosition);
+// 		let newPos = currentPos - 1; // Move up by 1px
+  
+// 		// If item has moved up beyond view, reset to bottom
+// 		if (newPos < -itemHeight) {
+// 		  newPos = (items.length - 1) * itemHeight;
+// 		  item.style.opacity = '0';
+// 		  setTimeout(() => {
+// 			item.style.opacity = '1';
+// 		  }, 50);
+// 		}
+  
+// 		// Calculate scale based on position
+// 		const centerPoint = feed2.clientHeight / 2;
+// 		const distanceFromCenter = Math.abs(newPos - centerPoint);
+// 		const maxDistance = feed2.clientHeight;
+// 		const scale = 1 - (distanceFromCenter / maxDistance) * 0.3;
+		
+// 		// Calculate opacity
+// 		const opacity = 1 - (distanceFromCenter / maxDistance) * 0.5;
+  
+// 		// Apply transformations
+// 		item.style.transform = `translateY(${newPos}px) scale(${scale})`;
+// 		item.style.opacity = opacity;
+		
+// 		// Update position data
+// 		item.dataset.currentPosition = newPos;
+// 	  });
+  
+// 	  requestAnimationFrame(animateItems);
+// 	}
+  
+// 	// Initialize
+// 	setupItems();
+// 	requestAnimationFrame(animateItems);
+//   });
