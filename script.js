@@ -1,228 +1,210 @@
+// Physics Engine Optimization
 async function initPhysics() {
-	// Wait for all images to load
-	const imgElements = Array.from(document.querySelectorAll('.svg-sprites img'));
-	await Promise.all(imgElements.map(img => {
-		return new Promise((resolve) => {
-			if (img.complete) resolve();
-			img.onload = () => resolve();
-			img.onerror = () => resolve(); // Skip failed loads
-		});
-	}));
+    // Use WeakMap for better memory management with DOM elements
+    const imageLoadMap = new WeakMap();
+    
+    // More efficient image loading with Promise.all and WeakMap
+    const imgElements = Array.from(document.querySelectorAll('.svg-sprites img'));
+    await Promise.all(imgElements.map(img => {
+        if (imageLoadMap.has(img)) return imageLoadMap.get(img);
+        const promise = new Promise((resolve) => {
+            if (img.complete) resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+        });
+        imageLoadMap.set(img, promise);
+        return promise;
+    }));
 
-	// Module aliases
-	const Engine = Matter.Engine,
-		Render = Matter.Render,
-		Runner = Matter.Runner,
-		Bodies = Matter.Bodies,
-		Composite = Matter.Composite,
-		Mouse = Matter.Mouse,
-		MouseConstraint = Matter.MouseConstraint,
-		Body = Matter.Body;
+    // Module aliases - destructure for better minification
+    const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Body, Vector } = Matter;
 
-	// Create engine with reduced gravity
-	const engine = Engine.create({
-		gravity: {
-			x: 0,
-			y: 0.5
-		}
-	});
-	const world = engine.world;
+    // Create engine with optimized settings
+    const engine = Engine.create({
+        gravity: { x: 0, y: 0.5 },
+        enableSleeping: true, // Enable sleeping for inactive bodies
+        constraintIterations: 2 // Reduce constraint iterations for better performance
+    });
+    
+    const world = engine.world;
+    const container = document.getElementById('canvas-container');
+    
+    // Create renderer with optimized settings
+    const render = Render.create({
+        element: container,
+        engine: engine,
+        options: {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            wireframes: false,
+            background: 'transparent',
+            pixelRatio: Math.min(window.devicePixelRatio, 2), // Cap pixel ratio for better performance
+            showSleeping: false,
+            showDebug: false
+        }
+    });
 
-	// Create renderer
-	const container = document.getElementById('canvas-container');
-	const render = Render.create({
-		element: container,
-		engine: engine,
-		options: {
-			width: container.clientWidth,
-			height: container.clientHeight,
-			wireframes: false,
-			background: 'transparent',
-			pixelRatio: window.devicePixelRatio
-		}
-	});
+    // Optimized wall options
+    const wallOptions = {
+        isStatic: true,
+        render: { visible: false },
+        friction: 0,
+        restitution: 0.7,
+        chamfer: { radius: 0 } // Remove chamfer for walls
+    };
 
-	// Wall options
-	const wallOptions = {
-		isStatic: true,
-		render: {
-			visible: false
-		},
-		friction: 0,
-		restitution: 0.7
-	};
+    // Create walls with cached dimensions
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const walls = [
+        Bodies.rectangle(containerWidth / 2, containerHeight + 30, containerWidth, 60, wallOptions),
+        Bodies.rectangle(-30, containerHeight / 2, 60, containerHeight, wallOptions),
+        Bodies.rectangle(containerWidth + 30, containerHeight / 2, 60, containerHeight, wallOptions)
+    ];
 
-	// Create walls
-	const ground = Bodies.rectangle(container.clientWidth / 2, container.clientHeight + 30, container.clientWidth, 60, wallOptions);
-	const leftWall = Bodies.rectangle(-30, container.clientHeight / 2, 60, container.clientHeight, wallOptions);
-	const rightWall = Bodies.rectangle(container.clientWidth + 30, container.clientHeight / 2, 60, container.clientHeight, wallOptions);
+    // Optimized body creation with shared options
+    const bodyOptions = {
+        restitution: 0.7,
+        friction: 0.01,
+        frictionAir: 0.005,
+        density: 0.002,
+        slop: 0,
+        chamfer: { radius: 2 }
+    };
 
-	// Create bodies for each SVG
-	const bodies = imgElements.map((img, index) => {
-		// Get natural dimensions of the image
-		const width = img.naturalWidth || img.width;
-		const height = img.naturalHeight || img.height;
+    // Create bodies with optimized sprite rendering
+    const bodies = imgElements.map((img, index) => {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
+        
+        return Bodies.rectangle(
+            50 + Math.random() * (containerWidth - 100),
+            -100 - (index * 100),
+            width,
+            height,
+            {
+                ...bodyOptions,
+                render: {
+                    sprite: {
+                        texture: img.src,
+                        xScale: 1,
+                        yScale: 1
+                    }
+                }
+            }
+        );
+    });
 
-		return Bodies.rectangle(
-			50 + Math.random() * (container.clientWidth - 100),
-			-100 - (index * 100),
-			width,
-			height,
-			{
-				render: {
-					sprite: {
-						texture: img.src,
-						xScale: 1,
-						yScale: 1
-					}
-				},
-				restitution: 0.7,
-				friction: 0.01,
-				frictionAir: 0.005,
-				density: 0.002, // Adjusted for better physics with actual sizes
-				slop: 0,
-				chamfer: { radius: 2 }
-			}
-		);
-	});
+    // Optimized mouse constraint
+    const mouse = Mouse.create(render.canvas);
+    const mouseConstraint = MouseConstraint.create(engine, {
+        mouse: mouse,
+        constraint: {
+            stiffness: 0.1,
+            render: { visible: false }
+        }
+    });
 
-	// Add mouse control
-	const mouse = Mouse.create(render.canvas);
-	const mouseConstraint = MouseConstraint.create(engine, {
-		mouse: mouse,
-		constraint: {
-			stiffness: 0.1,
-			render: {
-				visible: false
-			}
-		}
-	});
+    // Add all bodies to world at once
+    Composite.add(world, [...walls, ...bodies, mouseConstraint]);
 
-	// Add all bodies to the world
-	Composite.add(world, [ground, leftWall, rightWall, ...bodies, mouseConstraint]);
+    // Optimized mouse interaction with throttling
+    let lastTime = 0;
+    let lastMousePos = { x: 0, y: 0 };
+    
+    render.canvas.addEventListener('mousemove', (event) => {
+        const currentTime = performance.now();
+        if (currentTime - lastTime < 16) return; // Limit to ~60fps
+        
+        const mousePosition = {
+            x: event.offsetX,
+            y: event.offsetY
+        };
 
-	// Smooth mouse repulsion
-	let lastMousePos = { x: 0, y: 0 };
-	render.canvas.addEventListener('mousemove', (event) => {
-		const mousePosition = {
-			x: event.offsetX,
-			y: event.offsetY
-		};
+        const mouseVelocity = {
+            x: (mousePosition.x - lastMousePos.x) * 0.1,
+            y: (mousePosition.y - lastMousePos.y) * 0.1
+        };
 
-		const mouseVelocity = {
-			x: mousePosition.x - lastMousePos.x,
-			y: mousePosition.y - lastMousePos.y
-		};
+        const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
+        
+        bodies.forEach(body => {
+            const distance = Vector.magnitude(Vector.sub(body.position, mousePosition));
+            if (distance < 100) {
+                const force = Vector.mult(
+                    Vector.normalise(Vector.sub(body.position, mousePosition)),
+                    0.05 * (1 - distance/100) * Math.min(3, speed)
+                );
+                Body.applyForce(body, body.position, force);
+            }
+        });
 
-		bodies.forEach(body => {
-			const distance = Matter.Vector.magnitude(Matter.Vector.sub(body.position, mousePosition));
-			if (distance < 100) {
-				const force = Matter.Vector.mult(
-					Matter.Vector.normalise(Matter.Vector.sub(body.position, mousePosition)),
-					0.05 * (1 - distance/100) * Math.min(3, Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y))
-				);
-				Body.applyForce(body, body.position, force);
-			}
-		});
+        lastMousePos = mousePosition;
+        lastTime = currentTime;
+    }, { passive: true });
 
-		lastMousePos = mousePosition;
-	});
+    // Optimized resize handler with debouncing
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        
+        resizeTimeout = setTimeout(() => {
+            render.canvas.width = container.clientWidth;
+            render.canvas.height = container.clientHeight;
+            
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+            
+            Body.setPosition(walls[0], { 
+                x: newWidth / 2,
+                y: newHeight + 30
+            });
+            Body.setPosition(walls[2], {
+                x: newWidth + 30,
+                y: newHeight / 2
+            });
+        }, 250);
+    });
 
-	// Responsive handling
-	window.addEventListener('resize', () => {
-		render.canvas.width = container.clientWidth;
-		render.canvas.height = container.clientHeight;
-		Matter.Body.setPosition(ground, { 
-			x: container.clientWidth / 2,
-			y: container.clientHeight + 30
-		});
-		Matter.Body.setPosition(rightWall, {
-			x: container.clientWidth + 30,
-			y: container.clientHeight / 2
-		});
-	});
+    // Optimized runner
+    const runner = Runner.create({
+        isFixed: true,
+        delta: 1000/60
+    });
+    Runner.run(runner, engine);
+    Render.run(render);
 
-	// Run the engine
-	const runner = Runner.create({
-		isFixed: true,
-		delta: 1000/60
-	});
-	Runner.run(runner, engine);
-	Render.run(render);
+    // Optimized reset with RAF
+    let resetTimeout;
+    function checkReset() {
+        bodies.forEach(body => {
+            if (body.position.y > container.clientHeight + 100) {
+                Body.setPosition(body, {
+                    x: 50 + Math.random() * (containerWidth - 100),
+                    y: -100
+                });
+                Body.setVelocity(body, { x: 0, y: 0 });
+                Body.setAngularVelocity(body, 0);
+            }
+        });
+        resetTimeout = requestAnimationFrame(checkReset);
+    }
+    resetTimeout = requestAnimationFrame(checkReset);
 
-	// Reset fallen objects
-	setInterval(() => {
-		bodies.forEach(body => {
-			if (body.position.y > container.clientHeight + 100) {
-				Body.setPosition(body, {
-					x: 50 + Math.random() * (container.clientWidth - 100),
-					y: -100
-				});
-				Body.setVelocity(body, { x: 0, y: 0 });
-				Body.setAngularVelocity(body, 0);
-			}
-		});
-	}, 1000);
+    // Cleanup function
+    return () => {
+        Runner.stop(runner);
+        Render.stop(render);
+        cancelAnimationFrame(resetTimeout);
+        World.clear(world, true);
+        Engine.clear(engine);
+        render.canvas.remove();
+        render.canvas = null;
+        render.context = null;
+    };
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initPhysics);
-
-//-------------------------------------------------------TEXT ANIMATION--------------------------------------------------//
-const phrases = [
-    "транскрибация",
-    "перевод",
-    "конвертация",
-    "преобразование",
-    "транскрипция",
-	"расшифровка"
-  ];
-  
-  const typingElement = document.getElementById('typing-text');
-  const cursorElement = document.getElementById('cursor');
-  let phraseIndex = 0;
-  let charIndex = 0;
-  let isDeleting = false;
-  
-  function typePhrase() {
-    const currentPhrase = phrases[phraseIndex];
-    
-    if (!isDeleting && charIndex <= currentPhrase.length) {
-      typingElement.textContent = currentPhrase.substring(0, charIndex);
-      charIndex++;
-      if (charIndex > currentPhrase.length) {
-        setTimeout(() => {
-          isDeleting = true;
-          typePhrase();
-        }, 10000); // Wait for 10 seconds before deleting
-      } else {
-        setTimeout(typePhrase, 100); // Typing speed
-      }
-    } else if (isDeleting && charIndex > 0) {
-      typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
-      charIndex--;
-      setTimeout(typePhrase, 50); // Deleting speed
-    } else {
-      isDeleting = false;
-      phraseIndex = (phraseIndex + 1) % phrases.length;
-      charIndex = 0;
-      setTimeout(typePhrase, 500); // Pause before typing next phrase
-    }
-  }
-  
-  // Cursor blinking effect
-  function blinkCursor() {
-    cursorElement.style.visibility = (cursorElement.style.visibility === 'visible') ? 'hidden' : 'visible';
-  }
-  
-  setInterval(blinkCursor, 530); // Blink every 530ms for a more natural feel
-  
-  // Start the animation
-  typePhrase();
-
-
-  //----------------------------UPGRADE-ANIMATION ---------------------------------//
-  function initUpgradeAnimation() {
+function initUpgradeAnimation() {
     const container = document.querySelector('.container');
     const numIcons = 3;
     let currentIcon = 0;
@@ -288,153 +270,200 @@ const phrases = [
 }
 
 // Add the initialization call
-document.addEventListener('DOMContentLoaded', () => {
-    initPhysics();
-    initUpgradeAnimation();
-});
 
 
-//---------------------------------------FEED-ANIMTAION--------------------------//
-document.addEventListener('DOMContentLoaded', () => {
+// Optimized Text Animation
+const initTextAnimation = (() => {
+    const phrases = [
+        "транскрибация",
+        "перевод",
+        "конвертация",
+        "преобразование",
+        "транскрипция",
+        "расшифровка"
+    ];
+    
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    let animationFrame;
+    
+    return () => {
+        const typingElement = document.getElementById('typing-text');
+        const cursorElement = document.getElementById('cursor');
+        if (!typingElement || !cursorElement) return;
+        
+        function typePhrase(timestamp) {
+            const currentPhrase = phrases[phraseIndex];
+            
+            if (!isDeleting && charIndex <= currentPhrase.length) {
+                typingElement.textContent = currentPhrase.substring(0, charIndex);
+                charIndex++;
+                
+                if (charIndex > currentPhrase.length) {
+                    setTimeout(() => {
+                        isDeleting = true;
+                        requestAnimationFrame(typePhrase);
+                    }, 10000);
+                    return;
+                }
+            } else if (isDeleting && charIndex > 0) {
+                typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                isDeleting = false;
+                phraseIndex = (phraseIndex + 1) % phrases.length;
+                charIndex = 0;
+                setTimeout(() => requestAnimationFrame(typePhrase), 500);
+                return;
+            }
+            
+            const delay = isDeleting ? 50 : 100;
+            setTimeout(() => requestAnimationFrame(typePhrase), delay);
+        }
+        
+        // Optimized cursor blink
+        let cursorVisible = true;
+        function blinkCursor() {
+            cursorVisible = !cursorVisible;
+            cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
+        }
+        
+        setInterval(blinkCursor, 530);
+        requestAnimationFrame(typePhrase);
+    };
+})();
+
+// Optimized Feed Animation
+function initFeedAnimation() {
     const feeds = document.querySelectorAll('.feed');
+    if (!feeds.length) return;
+
+    const styleSheet = new CSSStyleSheet();
+    styleSheet.replaceSync(`
+        .feed {
+            overflow: visible !important;
+            will-change: transform;
+        }
+        .feed img {
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            pointer-events: none;
+            transform-origin: center;
+            display: block;
+            margin: 0.001vh 0; /* Consistent 10px gap between items */
+            will-change: transform, opacity;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                       opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .feed img {
+                transition: transform 0.1s linear, opacity 0.1s linear;
+            }
+        }
+    `);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, styleSheet];
+
+    const windowHeight = window.innerHeight;
+    let lastScrollTop = window.pageYOffset;
+    let scrollVelocity = 0;
+    let ticking = false;
+
+    const ease = t => 1 + (--t) * t * t;
     
     feeds.forEach(feed => {
         const items = Array.from(feed.getElementsByTagName('img'));
+        const itemCache = new WeakMap();
         
-        // Enhanced smooth transitions
-        items.forEach(item => {
-            item.style.transition = 'transform 0.8s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-            item.style.willChange = 'transform, opacity';
-            item.style.transformOrigin = 'bottom center';
-            // Reduce margin to create tighter spacing
-            item.style.margin = '-22px 0'; // Adjust this value to control spacing
-        });
+        function updateItems() {
+            const feedRect = feed.getBoundingClientRect();
+            
+            if (feedRect.top < windowHeight && feedRect.bottom > 0) {
+                items.forEach(item => {
+                    const rect = item.getBoundingClientRect();
+                    const viewportPosition = (rect.top + rect.height / 2) / windowHeight;
+                    
+                    // Adjusted scale calculations for tighter grouping
+                    let targetScale;
+                    if (viewportPosition <= 0.3) {
+                        const normalizedPos = viewportPosition / 0.3;
+                        targetScale = 0.85 + (normalizedPos * 0.1); // Smaller range: 0.85 to 0.95
+                    } else if (viewportPosition <= 0.7) {
+                        const normalizedPos = (viewportPosition - 0.3) / 0.4;
+                        targetScale = 0.95 + (normalizedPos * 0.1); // Smaller range: 0.95 to 1.05
+                    } else {
+                        const normalizedPos = (viewportPosition - 0.7) / 0.3;
+                        targetScale = 1.05 + (normalizedPos * 0.05); // Smaller range: 1.05 to 1.1
+                    }
 
-        // Smooth easing function
-        const easeOutQuint = t => 1 + (--t) * t * t * t * t;
+                    // Reduced velocity influence
+                    const velocityScale = 1 + (Math.abs(scrollVelocity) * 0.0005);
+                    const scale = targetScale * velocityScale;
+                    
+                    // Simplified movement calculations
+                    const centerOffset = viewportPosition - 0.5;
+                    const baseParallax = (viewportPosition - 0.5) * 10; // Reduced movement
+                    const velocityParallax = scrollVelocity * 0.05; // Reduced velocity influence
+                    const rotation = 15 + ((viewportPosition - 0.5) * 2); // 
+                    const zTranslation = (viewportPosition - 0.5) * -40; // Reduced depth
+                    
+                    const transform = `
+                        translate3d(0, ${baseParallax + velocityParallax}px, ${zTranslation}px)
+                        scale(${scale})
+                        rotateX(${rotation}deg)
+                    `;
+                    
+                    // Simplified opacity calculation
+                    const opacity = 0.9;
+                    
+                    const cache = itemCache.get(item) || {};
+                    if (
+                        !cache.transform ||
+                        Math.abs(cache.opacity - opacity) > 0.01 ||
+                        cache.transform !== transform
+                    ) {
+                        item.style.transform = transform;
+                        item.style.opacity = opacity;
+                        
+                        itemCache.set(item, { transform, opacity });
+                    }
+                });
+            }
+        }
         
-        // Enhanced interpolation
-        const smoothInterpolate = (start, end, factor) => {
-            const ease = easeOutQuint(factor);
-            return start + (end - start) * ease;
-        };
-
-        // Track scroll velocity
-        let lastScrollTop = window.pageYOffset;
-        let scrollVelocity = 0;
-        const velocityDamping = 0.9;
-        
-        // Scroll handler with enhanced scaling pattern
-        let ticking = false;
+        // Optimized scroll handler with throttling
+        let scrollTimeout;
         window.addEventListener('scroll', () => {
             if (!ticking) {
-                requestAnimationFrame(() => {
+                if (scrollTimeout) {
+                    cancelAnimationFrame(scrollTimeout);
+                }
+                
+                scrollTimeout = requestAnimationFrame(() => {
                     const currentScrollTop = window.pageYOffset;
                     scrollVelocity = (currentScrollTop - lastScrollTop) * 0.1;
                     lastScrollTop = currentScrollTop;
                     
-                    const feedRect = feed.getBoundingClientRect();
-                    const windowHeight = window.innerHeight;
-                    
-                    if (feedRect.top < windowHeight && feedRect.bottom > 0) {
-                        items.forEach((item, index) => {
-                            const rect = item.getBoundingClientRect();
-                            const elementCenter = rect.top + rect.height / 2;
-                            
-                            // Calculate position relative to viewport
-                            const viewportPosition = elementCenter / windowHeight;
-                            
-                            // Enhanced scale calculation based on position
-                            // Top items smaller, middle items medium, bottom items larger
-                            let targetScale;
-                            if (viewportPosition <= 0.3) {
-                                // Top items (smaller)
-                                targetScale = 0.7 + (viewportPosition * 0.5);
-                            } else if (viewportPosition <= 0.7) {
-                                // Middle items (medium)
-                                targetScale = 0.85 + ((viewportPosition - 0.3) * 0.3);
-                            } else {
-                                // Bottom items (larger)
-                                targetScale = 1 + ((viewportPosition - 0.7) * 0.2);
-                            }
-
-                            // Apply velocity influence to scale
-                            const velocityScale = 1 + (Math.abs(scrollVelocity) * 0.001);
-                            const scale = targetScale * velocityScale;
-
-                            // Enhanced parallax movement
-                            const parallaxStrength = 120; // Increased for more dramatic effect
-                            const baseParallax = (viewportPosition - 0.5) * parallaxStrength;
-                            const velocityParallax = scrollVelocity * 0.3;
-                            
-                            // Calculate rotation (reduced for subtler effect)
-                            const baseRotation = 15;
-                            const rotationOffset = (viewportPosition - 0.5) * 5;
-                            const rotation = baseRotation + rotationOffset;
-
-                            // Z-translation for enhanced depth
-                            const zTranslation = (viewportPosition - 0.5) * -100;
-
-                            // Combine transforms
-                            const transform = `
-                                translate3d(0, ${baseParallax + velocityParallax}px, ${zTranslation}px)
-                                scale(${scale})
-                                rotateX(${rotation}deg)
-                            `;
-                            
-                            // Opacity based on position
-                            const opacity = smoothInterpolate(0.6, 1, 1 - Math.abs(viewportPosition - 0.5));
-                            
-                            // Apply styles with dynamic transitions
-                            item.style.transform = transform;
-                            item.style.opacity = opacity;
-                            
-                            // Adjust transition speed based on velocity
-                            const transitionDuration = 0.8 - (Math.abs(scrollVelocity) * 0.001);
-                            item.style.transition = `
-                                transform ${transitionDuration}s cubic-bezier(0.23, 1, 0.32, 1),
-                                opacity ${transitionDuration}s cubic-bezier(0.23, 1, 0.32, 1)
-                            `;
-                        });
-                    }
-                    
-                    scrollVelocity *= velocityDamping;
+                    updateItems();
+                    scrollVelocity *= 0.9;
                     ticking = false;
                 });
-                
                 ticking = true;
             }
         }, { passive: true });
     });
 
-    // Initialize positions
+    // Initialize
     window.dispatchEvent(new Event('scroll'));
+}
+
+// Initialize everything
+document.addEventListener('DOMContentLoaded', () => {
+    initPhysics();
+    initTextAnimation();
+    initFeedAnimation();
+    initUpgradeAnimation();
 });
-
-// Add enhanced CSS
-const style = document.createElement('style');
-style.textContent = `
-    .feed{
-        overflow: visible !important;
-        padding: 20vh 0; /* Add padding to account for parallax movement */
-    }
-    
-    .feed img{
-        transform-style: preserve-3d;
-        backface-visibility: hidden;
-        pointer-events: none;
-        transform-origin: bottom center;
-        display: block;
-
-    }
-    
-    @media (prefers-reduced-motion: reduce) {
-        .feed img {
-            transition: transform 0.1s linear, opacity 0.1s linear;
-        }
-    }
-`;
-document.head.appendChild(style);
 
 
 ////
@@ -508,7 +537,59 @@ window.scroll({
 	behavior: 'smooth' 
   });
   
-  // Scroll to a certain element
-  document.querySelector('.hello').scrollIntoView({ 
-	behavior: 'smooth' 
-  });
+
+  function makeButtonClickable(button) {
+    let lastClickTime = 0;
+    const delay = 120;
+  
+    function handleMouseDown() {
+      const currentTime = Date.now();
+      if (currentTime - lastClickTime > delay) {
+        button.classList.add("fast-click");
+        const descendants = button.querySelectorAll("*");
+        descendants.forEach((descendant) =>
+          descendant.classList.add("fast-click")
+        );
+        lastClickTime = currentTime;
+      }
+    }
+  
+    function handleMouseUp() {
+      setTimeout(() => {
+        button.classList.remove("fast-click");
+        const descendants = button.querySelectorAll("*");
+        descendants.forEach((descendant) =>
+          descendant.classList.remove("fast-click")
+        );
+      }, delay);
+    }
+  
+    function handleMouseLeave() {
+      button.classList.remove("fast-click");
+      const descendants = button.querySelectorAll("*");
+      descendants.forEach((descendant) =>
+        descendant.classList.remove("fast-click")
+      );
+    }
+  
+    button.addEventListener("mousedown", handleMouseDown);
+    button.addEventListener("mouseup", handleMouseUp);
+    button.addEventListener("mouseleave", handleMouseLeave);
+  }
+  
+  const loginButton = document.querySelector(".login");
+  makeButtonClickable(loginButton);
+  
+  const anotherButton = document.querySelector(".logo");
+  const logoImg = document.querySelector(".logo-img");
+  
+  if (anotherButton) {
+    makeButtonClickable(anotherButton);
+  }
+  if (logoImg) {
+    makeButtonClickable(logoImg);
+  }
+  
+  const menuItems = document.querySelectorAll(".menu-item");
+  menuItems.forEach((i) => makeButtonClickable(i));
+  

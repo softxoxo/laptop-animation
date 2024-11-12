@@ -1,26 +1,10 @@
-<svg width="59" height="49" viewBox="0 0 59 49" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_d_1_69)">
-<rect x="4.84535" y="0.110031" width="50" height="40" rx="5" fill="url(#paint0_linear_1_69)" fill-opacity="0.8" shape-rendering="crispEdges"/>
-<rect x="5.13933" y="0.404005" width="49.4121" height="39.4121" rx="4.70603" stroke="url(#paint1_linear_1_69)" stroke-width="0.587948" shape-rendering="crispEdges"/>
-<path d="M15.5494 25.11V15.24H16.6974L20.5894 24.004H20.1694L24.0614 15.24H25.1954V25.11H24.0054V16.976H24.4394L20.7854 25.11H19.9594L16.3054 16.976H16.7394V25.11H15.5494ZM27.6079 25.11V15.24H28.9099V19.706H28.9379L33.5719 15.24H35.2099L29.8339 20.35L29.8479 19.72L35.5879 25.11H33.8939L28.9379 20.476H28.9099V25.11H27.6079ZM39.4799 25.11L35.1539 15.24H36.5679L40.3339 24.032H39.8579L43.6379 15.24H44.9959L40.6419 25.11H39.4799Z" fill="#191919"/>
-</g>
+<svg width="105" height="40" viewBox="0 0 105 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="0.444445" y="-0.444445" width="103.611" height="39.1111" rx="4" transform="matrix(1 0 0 -1 2.6491e-08 39.1111)" fill="#2B2B2B"/>
+<rect x="0.444445" y="-0.444445" width="103.611" height="39.1111" rx="4" transform="matrix(1 0 0 -1 2.6491e-08 39.1111)" stroke="url(#paint0_linear_1314_584)" stroke-width="0.88889"/>
+<path d="M17.166 14L21.166 10.5L87.166 11V22L83.666 25.5H79.416V29H71.166L69.166 25.5L61.666 24V26L57.666 25.5V29H52.666H46.166L44.666 25.5H35.166H28.166L23.666 29H17.666L17.166 14Z" fill="#D9D9D9"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M87.55 22.3661V10.8936L81.198 6.49962H77.293V8.45262L74.3635 6.49962H70.946V8.45262L68.749 6.49962H62.4025L60.45 8.45262L59.9615 6.49962L54.3595 6.51462L52.1505 8.45262L51.9065 6.49962L45.56 6.51462L45.316 8.45262L43.6075 6.51462L33.8435 6.49962L31.8905 7.47612V6.49962H26.52L20.6615 10.1611L17 13.8226V29.9326H24.567L28.2285 26.2711H44.8275V29.9326H58.4975V26.2711H61.915V24.3181L63.868 26.2711H68.018L71.6795 29.9326H79.4905V26.2711H83.6405L87.55 22.3661ZM26.52 24.5631H23.1025V28.2246H18.7085V14.5546L21.3935 11.6256H26.52V16.2636H23.1025V20.1686H26.52V24.5631ZM44.8275 24.5631H40.4335V16.2631H38.725V24.5631H34.575V16.2631H32.8665V24.5631H28.2285V11.6256H41.8985L44.8275 14.5546V24.5631ZM50.686 24.5631H46.536V11.6256H50.686V24.5631ZM50.686 28.2246H46.536V26.2716H50.686V28.2246ZM60.206 24.5631H56.7885V28.2246H52.395V14.5546L55.08 11.6256H60.205V16.2636H56.7875V20.1686H60.205L60.206 24.5631ZM71.4345 24.5631H64.6L61.915 21.8781V14.5546L64.844 11.6256H71.434V16.2636H66.552V20.1686H71.434L71.4345 24.5631ZM85.8365 21.8781L82.9075 24.5631H77.7815V28.2246H73.1435V11.6256H77.7815V20.1696H81.199V11.6261H85.837L85.8365 21.8781Z" fill="#6441A4"/>
 <defs>
-<filter id="filter0_d_1_69" x="0.845352" y="0.110031" width="58" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="2"/>
-<feComposite in2="hardAlpha" operator="out"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_69"/>
-<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_69" result="shape"/>
-</filter>
-<linearGradient id="paint0_linear_1_69" x1="27.2715" y1="39.2563" x2="25.3566" y2="0.100684" gradientUnits="userSpaceOnUse">
-<stop stop-color="#696969"/>
-<stop offset="0.5" stop-color="white"/>
-<stop offset="1" stop-color="#696969"/>
-</linearGradient>
-<linearGradient id="paint1_linear_1_69" x1="4.84535" y1="18.1826" x2="54.0677" y2="26.5904" gradientUnits="userSpaceOnUse">
+<linearGradient id="paint0_linear_1314_584" x1="2.39685e-06" y1="18.0725" x2="93.9079" y2="51.5975" gradientUnits="userSpaceOnUse">
 <stop stop-color="white" stop-opacity="0.2"/>
 <stop offset="0.5" stop-color="#CCCCCC"/>
 <stop offset="1" stop-color="white" stop-opacity="0.2"/>
