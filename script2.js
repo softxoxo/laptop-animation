@@ -221,7 +221,7 @@ function initUpgradeAnimation() {
 
     function createIcon(type, number) {
         const icon = document.createElement('img');
-        icon.src = `./icons/upgrade-icons/icon-${type}-${number}.svg`;
+        icon.src = `./icons2/upgrade-icons/icon-${type}-${number}.svg`;
         icon.classList.add('upgrade-icon', `icon-${type}`);
         icon.alt = `Icon ${type} ${number}`;
         return icon;
