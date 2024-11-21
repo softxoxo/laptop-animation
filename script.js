@@ -14,7 +14,7 @@ async function initPhysics() {
         return promise;
     }));
 
-    const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Body, Vector } = Matter;
+    const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Body, Vector, World } = Matter;
 
     const engine = Engine.create({
         gravity: { x: 0, y: 0.5 },
@@ -95,7 +95,63 @@ async function initPhysics() {
         }
     });
 
-    Composite.add(world, [...walls, ...bodies, mouseConstraint]);
+    // Disable object dragging
+    mouseConstraint.constraint.stiffness = 0;
+
+    // Track mouse state
+    let isMouseInContainer = false;
+    let mouseExitPoint = null;
+    let mouseExitTime = 0;
+
+    // Mouse enter handler
+    container.addEventListener('mouseenter', () => {
+        isMouseInContainer = true;
+    });
+
+    // Enhanced mouse leave handler with boundary force
+    container.addEventListener('mouseleave', (event) => {
+        isMouseInContainer = false;
+        mouseExitPoint = {
+            x: event.clientX - container.getBoundingClientRect().left,
+            y: event.clientY - container.getBoundingClientRect().top
+        };
+        mouseExitTime = performance.now();
+
+        // Determine which boundary was crossed
+        const rect = container.getBoundingClientRect();
+        const exitForce = 0.4; // Adjust force magnitude
+
+        bodies.forEach(body => {
+            let forceVector;
+            
+            // Left boundary
+            if (event.clientX <= rect.left) {
+                forceVector = Vector.create(exitForce, 0);
+            }
+            // Right boundary
+            else if (event.clientX >= rect.right) {
+                forceVector = Vector.create(-exitForce, 0);
+            }
+            // Top boundary
+            else if (event.clientY <= rect.top) {
+                forceVector = Vector.create(0, exitForce);
+            }
+            // Bottom boundary
+            else if (event.clientY >= rect.bottom) {
+                forceVector = Vector.create(0, -exitForce);
+            }
+
+            if (forceVector) {
+                // Scale force based on distance from exit point
+                const distance = Vector.magnitude(Vector.sub(body.position, mouseExitPoint));
+                const scaledForce = Vector.mult(
+                    forceVector,
+                    Math.max(0, 1 - distance / (containerWidth * 0.5))
+                );
+                Body.applyForce(body, body.position, scaledForce);
+            }
+        });
+    });
 
     let lastTime = 0;
     let lastMousePos = { x: 0, y: 0 };
@@ -116,16 +172,18 @@ async function initPhysics() {
 
         const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
         
-        bodies.forEach(body => {
-            const distance = Vector.magnitude(Vector.sub(body.position, mousePosition));
-            if (distance < 100) {
-                const force = Vector.mult(
-                    Vector.normalise(Vector.sub(body.position, mousePosition)),
-                    0.05 * (1 - distance/100) * Math.min(3, speed)
-                );
-                Body.applyForce(body, body.position, force);
-            }
-        });
+        if (isMouseInContainer) {
+            bodies.forEach(body => {
+                const distance = Vector.magnitude(Vector.sub(body.position, mousePosition));
+                if (distance < 100) {
+                    const force = Vector.mult(
+                        Vector.normalise(Vector.sub(body.position, mousePosition)),
+                        0.05 * (1 - distance/100) * Math.min(3, speed)
+                    );
+                    Body.applyForce(body, body.position, force);
+                }
+            });
+        }
 
         lastMousePos = mousePosition;
         lastTime = currentTime;
@@ -177,13 +235,11 @@ async function initPhysics() {
                 allBodiesSettled = false;
             }
             
-            // Check if body is still moving significantly
             if (Math.abs(body.velocity.y) > 0.1 || Math.abs(body.velocity.x) > 0.1) {
                 allBodiesSettled = false;
             }
         });
 
-        // Add top wall after bodies have settled
         if (allBodiesSettled && !topWallAdded) {
             const topWall = Bodies.rectangle(containerWidth / 2, -30, containerWidth, 60, wallOptions);
             Composite.add(world, topWall);
@@ -193,6 +249,8 @@ async function initPhysics() {
         resetTimeout = requestAnimationFrame(checkReset);
     }
     resetTimeout = requestAnimationFrame(checkReset);
+
+    Composite.add(world, [...walls, ...bodies, mouseConstraint]);
 
     return () => {
         Runner.stop(runner);
@@ -205,145 +263,6 @@ async function initPhysics() {
         render.context = null;
     };
 }
-//---------------------------------------------------UPGRADE------------------------------------------------------------//
-
-let isContainerVisible = true; 
-
-function initUpgradeAnimation() {
-    const container = document.querySelector('.container');
-    const numIcons = 3;
-    let currentIcon = 0;
-    let isAnimating = false;
-    const iconDelay = 400;
-    const animationDuration = 1600;
-    
-    const activeIcons = new Set();
-
-    function createIcon(type, number) {
-        const icon = document.createElement('img');
-        icon.src = `./icons/upgrade-icons/icon-${type}-${number}.svg`;
-        icon.classList.add('upgrade-icon', `icon-${type}`);
-        icon.alt = `Icon ${type} ${number}`;
-        return icon;
-    }
-
-    function cleanupIcon(icon) {
-        if (activeIcons.has(icon)) {
-            icon.remove();
-            activeIcons.delete(icon);
-        }
-    }
-
-    function cleanupAllIcons() {
-        activeIcons.forEach(cleanupIcon);
-    }
-
-    function animateIcon(type, index, baseDelay) {
-        return new Promise((resolve) => {
-            if (!isContainerVisible) {
-                resolve();
-                return;
-            }
-
-            const icon = createIcon(type, currentIcon + 1);
-            activeIcons.add(icon);
-            container.appendChild(icon);
-            
-            icon.offsetHeight;
-
-            icon.classList.add(type === 'before' ? 'moving-to-laptop' : 'moving-from-laptop');
-            icon.style.animationDelay = `${baseDelay + (index * 0.64)}s`;
-
-            const cleanupTime = animationDuration + (baseDelay + (index * 0.64)) * 1600 + 100;
-            setTimeout(() => {
-                cleanupIcon(icon);
-                resolve();
-            }, cleanupTime);
-        });
-    }
-
-    async function animateSequence() {
-        if (isAnimating || !isContainerVisible) return;
-        isAnimating = true;
-
-        try {
-            cleanupAllIcons();
-
-            if (!isContainerVisible) {
-                isAnimating = false;
-                return;
-            }
-
-            const toPromises = Array.from({ length: 3 }, (_, i) => 
-                animateIcon('before', i, 0)
-            );
-            await Promise.all(toPromises);
-
-            if (!isContainerVisible) {
-                cleanupAllIcons();
-                isAnimating = false;
-                return;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 200));
-
-            if (!isContainerVisible) {
-                cleanupAllIcons();
-                isAnimating = false;
-                return;
-            }
-
-            const fromPromises = Array.from({ length: 3 }, (_, i) => 
-                animateIcon('after', i, 0)
-            );
-            await Promise.all(fromPromises);
-
-            currentIcon = (currentIcon + 1) % numIcons;
-
-            setTimeout(() => {
-                isAnimating = false;
-                if (isContainerVisible) {
-                    animateSequence();
-                }
-            }, 500);
-
-        } catch (error) {
-            console.error('Animation error:', error);
-            isAnimating = false;
-        }
-    }
-
-    setTimeout(animateSequence, 1000);
-}
-
-// Initialize animation and scroll handling
-document.addEventListener('DOMContentLoaded', () => {
-    initUpgradeAnimation();
-    
-    // Handle scroll event to update container visibility
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                const scrollPercentage = (window.pageYOffset / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
-                
-                // Update container visibility flag
-                if (scrollPercentage > 20 && isContainerVisible) {
-                    isContainerVisible = false;
-                    const container = document.querySelector('.container');
-                    const activeIcons = container.querySelectorAll('.upgrade-icon');
-                    activeIcons.forEach(icon => icon.remove());
-                } else if (scrollPercentage <= 20 && !isContainerVisible) {
-                    isContainerVisible = true;
-                    initUpgradeAnimation();
-                }
-                
-                ticking = false;
-            });
-            ticking = true;
-        }
-    });
-});
 
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
@@ -409,11 +328,10 @@ const initTextAnimation = (() => {
 
 //---------------------------------------------------PARALAX------------------------------------------------------------//
 
-  document.addEventListener('DOMContentLoaded', () => {
-   
-// Force scroll to top on page load
-window.scrollTo(0, 0);
-window.history.scrollRestoration = 'manual';
+document.addEventListener('DOMContentLoaded', () => {
+    // Force scroll to top on page load
+    window.scrollTo(0, 0);
+    window.history.scrollRestoration = 'manual';
 
     const container = document.querySelector('.container');
     const feed = document.querySelector('.feed');
@@ -424,82 +342,125 @@ window.history.scrollRestoration = 'manual';
     // Calculate total scroll height needed
     const totalScrollHeight = window.innerHeight * 3;
     document.body.style.height = `${totalScrollHeight}px`;
-  
-    function handleScroll() {
-      const scrollPosition = window.pageYOffset;
-      const windowHeight = window.innerHeight;
-      const scrollPercentage = (scrollPosition / (totalScrollHeight - windowHeight)) * 100;
-  
-      // Move background slightly
-      document.body.style.backgroundPosition = `center ${-scrollPosition * 0.1}px`;
-  
-      // Handle laptop container
-      if (scrollPercentage > 20) {
-        container.classList.add('hidden');
-      } else {
-        container.classList.remove('hidden');
-      }
-  
-      // Handle feed images
-      if (scrollPercentage > 30 && scrollPercentage < 80) {
-        const feedStartPosition = windowHeight;
-        const currentPosition = feedStartPosition - (scrollPosition - (windowHeight * 0.3));
-        feed.style.transform = `translate(-50%, ${currentPosition}px)`;
-        
-        // Show/hide feed images based on scroll position
-        feedImages.forEach((img, index) => {
-          let imageScrollStart = 30 + (index * 4);
-          let imageScrollEnd = imageScrollStart + 30;
-          if (index > 3) {
-            imageScrollEnd = imageScrollStart + 29;
-          }
-          if (index > 5) {
-            imageScrollEnd = imageScrollStart - 10;
-          }
-          
-          if (scrollPercentage > imageScrollStart && scrollPercentage < imageScrollEnd) {
-            img.classList.add('visible');
-            img.classList.remove('hidden');
-          } else if (scrollPercentage >= imageScrollEnd) {
-            img.classList.add('hidden');
-            img.classList.remove('visible');
-          } else {
-            img.classList.remove('visible', 'hidden');
-          }
-        });
-      }
-  
-      // Handle try-free button visibility
-      if (scrollPercentage > 85) {
-        tryFreeButton.classList.add('visible');
-      } else {
-        tryFreeButton.classList.remove('visible');
-      }
-  
-      lastScrollTop = scrollPosition;
+    
+    // Mouse parallax variables
+    const maxMovement = 20; // Maximum pixels to move
+    let currentBackgroundX = 0;
+    let currentBackgroundY = 0;
+    let targetBackgroundX = 0;
+    let targetBackgroundY = 0;
+
+    function lerp(start, end, factor) {
+        return start + (end - start) * factor;
     }
-  
+
+    function updateParallax() {
+        // Smoothly interpolate current position to target position
+        currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
+        currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
+
+        // Apply the combined scroll and mouse movement
+        const scrollOffset = window.pageYOffset * 0.1;
+        document.body.style.backgroundPosition = 
+            `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
+
+        requestAnimationFrame(updateParallax);
+    }
+
+    function handleMouseMove(e) {
+        // Calculate mouse position as percentage of window
+        const xPercentage = e.clientX / window.innerWidth;
+        const yPercentage = e.clientY / window.innerHeight;
+        
+        // Calculate target movement amount (centered around -maxMovement to +maxMovement)
+        targetBackgroundX = (xPercentage - 0.5) * maxMovement;
+        targetBackgroundY = (yPercentage - 0.5) * maxMovement;
+    }
+
+    function handleScroll() {
+        const scrollPosition = window.pageYOffset;
+        const windowHeight = window.innerHeight;
+        const scrollPercentage = (scrollPosition / (totalScrollHeight - windowHeight)) * 100;
+
+        // Handle laptop container
+        if (scrollPercentage > 20) {
+            container.classList.add('hidden');
+        } else {
+            container.classList.remove('hidden');
+        }
+
+        // Handle feed images
+        if (scrollPercentage > 30 && scrollPercentage < 80) {
+            const feedStartPosition = windowHeight;
+            const currentPosition = feedStartPosition - (scrollPosition - (windowHeight * 0.3));
+            feed.style.transform = `translate(-50%, ${currentPosition}px)`;
+            
+            // Show/hide feed images based on scroll position
+            feedImages.forEach((img, index) => {
+                let imageScrollStart = 30 + (index * 4);
+                let imageScrollEnd = imageScrollStart + 30;
+                if (index > 3) {
+                    imageScrollEnd = imageScrollStart + 29;
+                }
+                if (index > 5) {
+                    imageScrollEnd = imageScrollStart - 10;
+                }
+                
+                if (scrollPercentage > imageScrollStart && scrollPercentage < imageScrollEnd) {
+                    img.classList.add('visible');
+                    img.classList.remove('hidden');
+                } else if (scrollPercentage >= imageScrollEnd) {
+                    img.classList.add('hidden');
+                    img.classList.remove('visible');
+                } else {
+                    img.classList.remove('visible', 'hidden');
+                }
+            });
+        }
+
+        // Handle try-free button visibility
+        if (scrollPercentage > 85) {
+            tryFreeButton.classList.add('visible');
+        } else {
+            tryFreeButton.classList.remove('visible');
+        }
+
+        lastScrollTop = scrollPosition;
+    }
+
+    // Reset parallax when mouse leaves window
+    function handleMouseLeave() {
+        targetBackgroundX = 0;
+        targetBackgroundY = 0;
+    }
+
     // Throttle scroll event
     let ticking = false;
     window.addEventListener('scroll', () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                handleScroll();
+                ticking = false;
+            });
+            ticking = true;
+        }
     });
-  
+
+    // Add mouse movement listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    // Start the parallax animation loop
+    updateParallax();
+
     // Initial call
     handleScroll();
-  });
+});
 
 //---------------------------------------------------INIT------------------------------------------------------------//
   document.addEventListener('DOMContentLoaded', () => {
     initPhysics();
     initTextAnimation();
-    initUpgradeAnimation();
 });
   
 //---------------------------------------------------HEADER------------------------------------------------------------//

@@ -1,39 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Physics Animation</title>
-    <style>   @import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap");</style>
-	<link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Профессиональный сервис для преобразования аудио и видео в текст. Транскрибация, перевод и расшифровка с высокой точностью.">
+    <meta name="keywords" content="транскрибация, перевод аудио в текст, конвертация видео в текст, расшифровка аудио">
+    <meta name="author" content="Audio Sector">
+    <meta name="robots" content="index, follow">
+    
+    <title>Сервис транскрибации аудио и видео в текст | Онлайн перевод</title>
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="./fonts/ST-SimpleSquare.otf" as="font" type="font/otf" crossorigin>
+    <link rel="preload" href="./icons/laptop.svg" as="image">
+    
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Онлайн транскрибация",
+        "applicationCategory": "WebApplication",
+        "offers": {
+            "@type": "Offer",
+            "priceCurrency": "RUB",
+            "price": "0",
+            "description": "30 минут бесплатно при регистрации"
+        },
+        "description": "Профессиональный сервис для преобразования аудио и видео в текст"
+    }
+    </script>
   <!-- SVG Sprites Container -->
   <div class="svg-sprites">
-    <img src="./icons/laptop-icons/icon-1.svg" alt="">
-        <img src="./icons/laptop-icons/icon-2.svg" alt="">
-        <img src="./icons/laptop-icons/icon-3.svg" alt="">
-        <img src="./icons/laptop-icons/icon-4.svg" alt="">
-        <img src="./icons/laptop-icons/icon-5.svg" alt="">
-        <img src="./icons/laptop-icons/icon-6.svg" alt="">
-        <img src="./icons/laptop-icons/icon-7.svg" alt="">
-        <img src="./icons/laptop-icons/icon-8.svg" alt="">
-        <img src="./icons/laptop-icons/icon-9.svg" alt="">
-        <img src="./icons/laptop-icons/icon-10.svg" alt="">
-        <img src="./icons/laptop-icons/icon-11.svg" alt="">
-        <img src="./icons/laptop-icons/icon-12.svg" alt="">
-        <img src="./icons/laptop-icons/icon-13.svg" alt="">
-        <img src="./icons/laptop-icons/icon-14.svg" alt="">
-        <img src="./icons/laptop-icons/icon-15.svg" alt="">
-        <img src="./icons/laptop-icons/icon-16.svg" alt="">
-        <img src="./icons/laptop-icons/icon-17.svg" alt="">
-        <img src="./icons/laptop-icons/icon-18.svg" alt="">
-        <img src="./icons/laptop-icons/icon-19.svg" alt="">
-        <img src="./icons/laptop-icons/icon-20.svg" alt="">
+    <img src="./icons/laptop-icons/icon-1@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-2@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-3@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-4@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-5@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-6@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-7@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-8@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-9@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-10@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-12@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-13@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-14@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-15@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-16@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-17@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-18@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-20@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-21@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-22@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-23@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-24@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-25@2x.svg" alt="">
+        <img src="./icons/laptop-icons/icon-26@2x.svg" alt="">
     </div>
     
     <div class="main-container">
-      <header class="header">
+      <header class="header" role="banner">>
         <a href="#" class="logo">
           <img
             class="logo-img"
@@ -319,6 +348,7 @@
           <button class="login"><span class="login-text">Вход</span></button>
         </div>
       </header>
+      <main role="main">
 		<div class="typing-block">
             <span class="typing-block-1" data-text="СКОЛЬКО МИНУТ">
 				Онлайн
@@ -331,7 +361,11 @@
 		<span class="typing-block-3" data-text="СКОЛЬКО МИНУТ">
 			аудио и видео в текст
 		</span>
+    <span class="registration-blue">
+      При регистрации дарим 30 минут!
+    </span>
 		<div class="container">
+      <div class="rect"></div>
 			<img src="./icons/laptop.svg" alt="laptop" class="laptop">
         <div id="canvas-container"></div>
 		</div>
@@ -357,15 +391,7 @@
       </defs>
       </svg>
       </button>
-      <!-- <div class="feed2">
-        <img src="./icons/feed/Frame 1321315900.svg" alt="">
-        <img src="./icons/feed/Frame 1321315902.svg" alt="">
-        <img src="./icons/feed/Frame 1321315904.svg" alt="">
-        <img src="./icons/feed/Frame 1321315906.svg" alt="">
-        <img src="./icons/feed/Frame 1321315907.svg" alt="">
-        <img src="./icons/feed/Frame 1321315908.svg" alt="">
-        <img src="./icons/feed/Frame 1321315909.svg" alt="">
-      </div> -->
+    </main>
     </div>
     
     
