@@ -108,51 +108,6 @@ async function initPhysics() {
         isMouseInContainer = true;
     });
 
-    // Enhanced mouse leave handler with boundary force
-    container.addEventListener('mouseleave', (event) => {
-        isMouseInContainer = false;
-        mouseExitPoint = {
-            x: event.clientX - container.getBoundingClientRect().left,
-            y: event.clientY - container.getBoundingClientRect().top
-        };
-        mouseExitTime = performance.now();
-
-        // Determine which boundary was crossed
-        const rect = container.getBoundingClientRect();
-        const exitForce = 0.4; // Adjust force magnitude
-
-        bodies.forEach(body => {
-            let forceVector;
-            
-            // Left boundary
-            if (event.clientX <= rect.left) {
-                forceVector = Vector.create(exitForce, 0);
-            }
-            // Right boundary
-            else if (event.clientX >= rect.right) {
-                forceVector = Vector.create(-exitForce, 0);
-            }
-            // Top boundary
-            else if (event.clientY <= rect.top) {
-                forceVector = Vector.create(0, exitForce);
-            }
-            // Bottom boundary
-            else if (event.clientY >= rect.bottom) {
-                forceVector = Vector.create(0, -exitForce);
-            }
-
-            if (forceVector) {
-                // Scale force based on distance from exit point
-                const distance = Vector.magnitude(Vector.sub(body.position, mouseExitPoint));
-                const scaledForce = Vector.mult(
-                    forceVector,
-                    Math.max(0, 1 - distance / (containerWidth * 0.5))
-                );
-                Body.applyForce(body, body.position, scaledForce);
-            }
-        });
-    });
-
     let lastTime = 0;
     let lastMousePos = { x: 0, y: 0 };
     
@@ -219,7 +174,6 @@ async function initPhysics() {
     Render.run(render);
 
     let resetTimeout;
-    let topWallAdded = false;
     
     function checkReset() {
         let allBodiesSettled = true;
@@ -239,12 +193,6 @@ async function initPhysics() {
                 allBodiesSettled = false;
             }
         });
-
-        if (allBodiesSettled && !topWallAdded) {
-            const topWall = Bodies.rectangle(containerWidth / 2, -30, containerWidth, 60, wallOptions);
-            Composite.add(world, topWall);
-            topWallAdded = true;
-        }
 
         resetTimeout = requestAnimationFrame(checkReset);
     }
@@ -267,64 +215,136 @@ async function initPhysics() {
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
     const phrases = [
-        "транскрибация",
-        "перевод",
-        "конвертация",
-        "преобразование",
-        "транскрипция",
-        "расшифровка"
+      "транскрибация",
+      "перевод",
+      "конвертация",
+      "преобразование",
+      "транскрипция",
+      "расшифровка"
     ];
-    
+  
+    class SpringWord {
+      constructor(element) {
+        this.element = element;
+        this.x = 0;
+        this.y = 0;
+        this.velX = 0;
+        this.velY = 0;
+        this.springConstant = 0.2;
+        this.friction = 0.8;
+      }
+  
+      update(mouseX, mouseY, isHovered) {
+        if (isHovered) {
+          const rect = this.element.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          
+          const dx = mouseX - centerX;
+          const dy = mouseY - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Add minimum distance threshold to prevent center-hover issues
+          if (distance < 300 && distance > 5) {  // Added minimum distance of 5px
+            const angle = Math.atan2(dy, dx);
+            const force = (50 - distance) / 8;
+            this.x = Math.cos(angle) * force;
+            this.y = Math.sin(angle) * force;
+          }
+        } else {
+          // Spring force
+          const forceX = -this.springConstant * this.x;
+          const forceY = -this.springConstant * this.y;
+          
+          this.velX = (this.velX + forceX) * this.friction;
+          this.velY = (this.velY + forceY) * this.friction;
+          
+          this.x += this.velX;
+          this.y += this.velY;
+        }
+  
+        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+      }
+    }
+  
     let phraseIndex = 0;
     let charIndex = 0;
     let isDeleting = false;
-    let animationFrame;
-    
+    let springWord = null;
+    let isHovered = false;
+    let mouseX = 0;
+    let mouseY = 0;
+  
+    function updateSpringAnimation() {
+      if (springWord) {
+        springWord.update(mouseX, mouseY, isHovered);
+      }
+      requestAnimationFrame(updateSpringAnimation);
+    }
+  
     return () => {
-        const typingElement = document.getElementById('typing-text');
-        const cursorElement = document.getElementById('cursor');
-        if (!typingElement || !cursorElement) return;
-        
-        function typePhrase(timestamp) {
-            const currentPhrase = phrases[phraseIndex];
-            
-            if (!isDeleting && charIndex <= currentPhrase.length) {
-                typingElement.textContent = currentPhrase.substring(0, charIndex);
-                charIndex++;
-                
-                if (charIndex > currentPhrase.length) {
-                    setTimeout(() => {
-                        isDeleting = true;
-                        requestAnimationFrame(typePhrase);
-                    }, 10000);
-                    return;
-                }
-            } else if (isDeleting && charIndex > 0) {
-                typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
-                charIndex--;
-            } else {
-                isDeleting = false;
-                phraseIndex = (phraseIndex + 1) % phrases.length;
-                charIndex = 0;
-                setTimeout(() => requestAnimationFrame(typePhrase), 500);
-                return;
-            }
-            
-            const delay = isDeleting ? 50 : 100;
-            setTimeout(() => requestAnimationFrame(typePhrase), delay);
+      const typingElement = document.getElementById('typing-text');
+      const cursorElement = document.getElementById('cursor');
+      if (!typingElement || !cursorElement) return;
+  
+      springWord = new SpringWord(typingElement);
+  
+      function typePhrase() {
+        const currentPhrase = phrases[phraseIndex];
+  
+        if (!isDeleting && charIndex <= currentPhrase.length) {
+          typingElement.textContent = currentPhrase.substring(0, charIndex);
+          charIndex++;
+  
+          if (charIndex > currentPhrase.length) {
+            setTimeout(() => {
+              isDeleting = true;
+              requestAnimationFrame(typePhrase);
+            }, 10000);
+            return;
+          }
+        } else if (isDeleting && charIndex > 0) {
+          typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
+          charIndex--;
+        } else {
+          isDeleting = false;
+          phraseIndex = (phraseIndex + 1) % phrases.length;
+          charIndex = 0;
+          setTimeout(() => requestAnimationFrame(typePhrase), 500);
+          return;
         }
-        
-        // Optimized cursor blink
-        let cursorVisible = true;
-        function blinkCursor() {
-            cursorVisible = !cursorVisible;
-            cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
-        }
-        
-        setInterval(blinkCursor, 530);
-        requestAnimationFrame(typePhrase);
+  
+        const delay = isDeleting ? 50 : 100;
+        setTimeout(() => requestAnimationFrame(typePhrase), delay);
+      }
+  
+      // Cursor blink
+      let cursorVisible = true;
+      function blinkCursor() {
+        cursorVisible = !cursorVisible;
+        cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
+      }
+      setInterval(blinkCursor, 530);
+  
+      // Mouse event handlers
+      typingElement.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+  
+      typingElement.addEventListener('mouseenter', () => {
+        isHovered = true;
+      });
+  
+      typingElement.addEventListener('mouseleave', () => {
+        isHovered = false;
+      });
+  
+      // Start animations
+      requestAnimationFrame(typePhrase);
+      requestAnimationFrame(updateSpringAnimation);
     };
-})();
+  })();
 
 //---------------------------------------------------PARALAX------------------------------------------------------------//
 
@@ -333,18 +353,25 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0);
     window.history.scrollRestoration = 'manual';
 
+    // Get all elements
     const container = document.querySelector('.container');
     const feed = document.querySelector('.feed');
-    const feedImages = Array.from(feed.querySelectorAll('img'));
+    const feedImages = feed ? Array.from(feed.querySelectorAll('img')) : [];
     const tryFreeButton = document.querySelector('.try-free');
-    let lastScrollTop = 0;
+    const canvasContainer = document.querySelector('#canvas-container');
+    const typingBlock = document.querySelector('.typing-block');
+    const typingBlock3 = document.querySelector('.typing-block-3');
+    const registrationBlue = document.querySelector('.registration-blue');
     
-    // Calculate total scroll height needed
-    const totalScrollHeight = window.innerHeight * 3;
+    let lastScrollTop = 0;
+    let isMouseOverCanvas = false;
+    
+    // Calculate total scroll height needed - reduced for faster animation
+    const totalScrollHeight = window.innerHeight * 2; // Reduced from 3 to 2
     document.body.style.height = `${totalScrollHeight}px`;
     
     // Mouse parallax variables
-    const maxMovement = 20; // Maximum pixels to move
+    const maxMovement = 10;
     let currentBackgroundX = 0;
     let currentBackgroundY = 0;
     let targetBackgroundX = 0;
@@ -354,85 +381,124 @@ document.addEventListener('DOMContentLoaded', () => {
         return start + (end - start) * factor;
     }
 
+    // Calculate transform based on scroll position instead of percentage
+    function calculateTransform(scrollPosition, startPosition, endPosition) {
+        const progress = Math.max(0, Math.min(1, 
+            (scrollPosition - startPosition) / (endPosition - startPosition)));
+        
+        const scale = Math.max(0.1, 1 - (progress * 0.9));
+        const translateZ = progress * -800; // Increased for more dramatic effect
+        const opacity = Math.max(0, 1 - (progress * 1.2));
+        
+        return {
+            transform: `perspective(800px) 
+                       translateZ(${translateZ}px) 
+                       scale(${scale})`,
+            opacity: opacity
+        };
+    }
+
     function updateParallax() {
-        // Smoothly interpolate current position to target position
-        currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
-        currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
+        if (!isMouseOverCanvas) {
+            currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
+            currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
 
-        // Apply the combined scroll and mouse movement
-        const scrollOffset = window.pageYOffset * 0.1;
-        document.body.style.backgroundPosition = 
-            `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
-
+            const scrollOffset = window.pageYOffset * 0.1;
+            document.body.style.backgroundPosition = 
+                `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
+        }
         requestAnimationFrame(updateParallax);
     }
 
     function handleMouseMove(e) {
-        // Calculate mouse position as percentage of window
-        const xPercentage = e.clientX / window.innerWidth;
-        const yPercentage = e.clientY / window.innerHeight;
+        if (!isMouseOverCanvas) {
+            const xPercentage = e.clientX / window.innerWidth;
+            const yPercentage = e.clientY / window.innerHeight;
+            targetBackgroundX = (xPercentage - 0.25) * maxMovement;
+            targetBackgroundY = (yPercentage - 0.25) * maxMovement;
+        }
+    }
+
+    function applyAnimation(element, scrollPosition, startScroll, endScroll) {
+        if (!element) return;
         
-        // Calculate target movement amount (centered around -maxMovement to +maxMovement)
-        targetBackgroundX = (xPercentage - 0.5) * maxMovement;
-        targetBackgroundY = (yPercentage - 0.5) * maxMovement;
+        const { transform, opacity } = calculateTransform(scrollPosition, startScroll, endScroll);
+        
+        // Apply transforms with fixed pixel values
+        if (element.classList.contains('container')) {
+            const baseTransform = 'translate(-50%, -160%)';
+            element.style.transform = `${baseTransform} ${transform}`;
+        } else if (element.classList.contains('typing-block') || 
+                   element.classList.contains('typing-block-3') ||
+                   element.classList.contains('registration-blue')) {
+            const baseTransform = 'translateX(-50%)';
+            element.style.transform = `${baseTransform} ${transform}`;
+        } else if (element.classList.contains('feed')) {
+            const baseTransform = 'translate(-50%, 20%)';
+            element.style.transform = `${baseTransform} ${transform}`;
+        }
+        
+        element.style.opacity = opacity.toString();
     }
 
     function handleScroll() {
         const scrollPosition = window.pageYOffset;
         const windowHeight = window.innerHeight;
-        const scrollPercentage = (scrollPosition / (totalScrollHeight - windowHeight)) * 100;
 
-        // Handle laptop container
-        if (scrollPercentage > 20) {
-            container.classList.add('hidden');
-        } else {
-            container.classList.remove('hidden');
-        }
+        // Fixed scroll positions for animations (in pixels)
+        const typingStartScroll = 0;
+        const typingEndScroll = 200;
+        const registrationStartScroll = 100;
+        const registrationEndScroll = 400;
+        const containerStartScroll = 200;
+        const containerEndScroll = 500;
+        const feedStartScroll = 500;
+        const feedEndScroll = 1300;
 
-        // Handle feed images
-        if (scrollPercentage > 30 && scrollPercentage < 80) {
-            const feedStartPosition = windowHeight;
-            const currentPosition = feedStartPosition - (scrollPosition - (windowHeight * 0.3));
-            feed.style.transform = `translate(-50%, ${currentPosition}px)`;
-            
-            // Show/hide feed images based on scroll position
-            feedImages.forEach((img, index) => {
-                let imageScrollStart = 30 + (index * 4);
-                let imageScrollEnd = imageScrollStart + 30;
-                if (index > 3) {
-                    imageScrollEnd = imageScrollStart + 29;
-                }
-                if (index > 5) {
-                    imageScrollEnd = imageScrollStart - 10;
-                }
-                
-                if (scrollPercentage > imageScrollStart && scrollPercentage < imageScrollEnd) {
-                    img.classList.add('visible');
-                    img.classList.remove('hidden');
-                } else if (scrollPercentage >= imageScrollEnd) {
-                    img.classList.add('hidden');
-                    img.classList.remove('visible');
-                } else {
-                    img.classList.remove('visible', 'hidden');
-                }
-            });
-        }
+        // Animate elements with fixed scroll values
+        applyAnimation(typingBlock, scrollPosition, typingStartScroll, typingEndScroll);
+        applyAnimation(typingBlock3, scrollPosition, typingStartScroll, typingEndScroll);
+        applyAnimation(registrationBlue, scrollPosition, registrationStartScroll, registrationEndScroll);
+        applyAnimation(container, scrollPosition, containerStartScroll, containerEndScroll);
+        applyAnimation(feed, scrollPosition, feedStartScroll, feedEndScroll);
 
-        // Handle try-free button visibility
-        if (scrollPercentage > 85) {
-            tryFreeButton.classList.add('visible');
-        } else {
-            tryFreeButton.classList.remove('visible');
+        // Handle try-free button visibility with fixed scroll position
+        if (tryFreeButton) {
+            if (scrollPosition > 600) {
+                tryFreeButton.classList.add('visible');
+            } else {
+                tryFreeButton.classList.remove('visible');
+            }
         }
 
         lastScrollTop = scrollPosition;
     }
 
-    // Reset parallax when mouse leaves window
     function handleMouseLeave() {
         targetBackgroundX = 0;
         targetBackgroundY = 0;
     }
+
+    // Add event listeners
+    if (canvasContainer) {
+        canvasContainer.addEventListener('mouseenter', () => {
+            isMouseOverCanvas = true;
+            targetBackgroundX = 0;
+            targetBackgroundY = 0;
+        });
+
+        canvasContainer.addEventListener('mouseleave', () => {
+            isMouseOverCanvas = false;
+        });
+    }
+
+    // Add smooth transitions to animated elements
+    [typingBlock, typingBlock3, registrationBlue, container, feed].forEach(element => {
+        if (element) {
+            element.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            element.style.willChange = 'transform, opacity';
+        }
+    });
 
     // Throttle scroll event
     let ticking = false;
@@ -446,17 +512,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add mouse movement listeners
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Start the parallax animation loop
     updateParallax();
-
-    // Initial call
     handleScroll();
 });
-
 //---------------------------------------------------INIT------------------------------------------------------------//
   document.addEventListener('DOMContentLoaded', () => {
     initPhysics();
@@ -519,3 +580,4 @@ document.addEventListener('DOMContentLoaded', () => {
   const menuItems = document.querySelectorAll(".menu-item");
   menuItems.forEach((i) => makeButtonClickable(i));
   
+//---------------------------------------------------BACKGROUND------------------------------------------------------------//

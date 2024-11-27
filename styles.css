@@ -131,13 +131,26 @@ body {
 	align-items: center;
   background-image: url("./icons/фон.png");
   background-position: center center;
-  transition: background-position 0.05s ease-out;
+  transition: background-position 0.2s ease-out;
   will-change: background-position;
   background-repeat: no-repeat;
   background-color: rgba(5, 5, 5, 1);
   background-attachment: fixed;
 }
+.typing-block,
+.typing-block-3,
+.registration-blue,
+.container,
+.feed {
+    transform-origin: center center;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
 
+body {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+}
 html {
     scroll-behavior: smooth;
   }
@@ -181,40 +194,6 @@ canvas {
     will-change: transform, opacity, left, right;
 }
 
-@keyframes moveToLaptop {
-    0% {
-        left: -50px;
-        opacity: 0;
-    }
-    40% {
-        opacity: 1;
-    }
-    80% {
-      opacity: 0.5;
-    }
-    100% {
-        left: 110px;
-        opacity: 0;
-    }
-}
-
-@keyframes moveFromLaptop {
-    0% {
-        right: 110px;
-        opacity: 0;
-    }
-    40% {
-        opacity: 1;
-    }
-80% {
-  opacity: 0.5;
-}
-    100% {
-        right: -50px;
-        opacity: 0;
-    }
-}
-
 .moving-to-laptop {
     animation: moveToLaptop 1.4s linear forwards;
 }
@@ -230,9 +209,9 @@ canvas {
 
 .rect {
   position: fixed;
-  top: 17px;
+  top: 16.9px;
   height: 12.5px;
-  width: 72.5px;
+  width: 72.4px;
   left: 50%;
   transform: translate(-50%, -50%) scale(1);
   background-color: rgba(137, 137, 137);
@@ -240,25 +219,15 @@ canvas {
 
 .container {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1);
   height: 500px;
   width: 1000px;
   margin-top: 70px;
   display: flex;
   justify-content: center;
   transition: all 0.5s ease;
-  will-change: transform, opacity;
 }
-
-.container.hidden {
-  transform: translate(-50%, -40%) scale(0.1);
-  opacity: 0;
-}
-
 .laptop {
-  backdrop-filter: blur(30px)
+  backdrop-filter: blur(30px);
 	top: 0;
 	position: absolute;
 }
@@ -307,6 +276,7 @@ height: 50px;
 
 
 .typing-block-2 {
+  position: relative;
   margin-top: -5px;
     width: 380px;
 font-style: normal;
@@ -315,6 +285,12 @@ font-size: 45px;
 color: #900F37;
 text-align: left;
 }
+
+#typing-text {
+  display: inline-block;
+  position: relative;
+}
+
 
 .registration-blue {
 font-style: normal;
@@ -344,27 +320,12 @@ height: 50px;
   flex-direction: column;
   align-items: center;
   gap: 100px;
-  transition: transform 0.5s ease;
 }
 
-.feed img {
-  opacity: 0;
-  transition: all 0.5s ease;
-  will-change: transform, opacity;
-}
-
-.feed img.visible {
-  opacity: 1;
-}
-
-.feed img.hidden {
-  transform: translate(0, 300%) scale(0.1);
-  opacity: 0;
-}
 
 .try-free {
   position: absolute;
-  top: 200vh; /* Position it far down */
+  top: 140vh; /* Position it far down */
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
