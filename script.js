@@ -349,174 +349,231 @@ const initTextAnimation = (() => {
 //---------------------------------------------------PARALAX------------------------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Force scroll to top on page load
-    window.scrollTo(0, 0);
-    window.history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+  window.history.scrollRestoration = 'manual';
 
-    // Get all elements
-    const container = document.querySelector('.container');
-    const feed = document.querySelector('.feed');
-    const feedImages = feed ? Array.from(feed.querySelectorAll('img')) : [];
-    const tryFreeButton = document.querySelector('.try-free');
-    const canvasContainer = document.querySelector('#canvas-container');
-    const typingBlock = document.querySelector('.typing-block');
-    const typingBlock3 = document.querySelector('.typing-block-3');
-    const registrationBlue = document.querySelector('.registration-blue');
-    
-    let lastScrollTop = 0;
-    let isMouseOverCanvas = false;
-    
-    // Calculate total scroll height needed - reduced for faster animation
-    const totalScrollHeight = window.innerHeight * 2; // Reduced from 3 to 2
-    document.body.style.height = `${totalScrollHeight}px`;
-    
-    // Mouse parallax variables
-    const maxMovement = 10;
-    let currentBackgroundX = 0;
-    let currentBackgroundY = 0;
-    let targetBackgroundX = 0;
-    let targetBackgroundY = 0;
+  const container = document.querySelector('.container');
+  const feed = document.querySelector('.feed');
+  const feedImages = feed ? Array.from(feed.querySelectorAll('img')) : [];
+  const tryFreeButton = document.querySelector('.try-free');
+  const canvasContainer = document.querySelector('#canvas-container');
+  const typingBlock = document.querySelector('.typing-block');
+  const typingBlock3 = document.querySelector('.typing-block-3');
+  const registrationBlue = document.querySelector('.registration-blue');
+  
+  let lastScrollTop = 0;
+  let isMouseOverCanvas = false;
+  
+  // Parallax variables
+  const maxMovement = 15;
+  let currentBackgroundX = 0;
+  let currentBackgroundY = 0;
+  let targetBackgroundX = 0;
+  let targetBackgroundY = 0;
+  
+  const totalScrollHeight = window.innerHeight * 2;
+  document.body.style.height = `${totalScrollHeight}px`;
+  
+  // Modified exit positions for more dramatic downward movement
+  const exitPositions = {
+      'typing-block': { x: -150, y: 350 },
+      'typing-block-3': { x: 150, y: 350 },
+      'registration-blue': { x: -200, y: 450 },
+      'container': { x: 200, y: 450 },
+      'feed': { x: 0, y: 550 }
+  };
 
-    function lerp(start, end, factor) {
-        return start + (end - start) * factor;
-    }
+  // Enhanced star-like circles
+  const circles = {};
+  Object.keys(exitPositions).forEach(elementClass => {
+      const circle = document.createElement('div');
+      circle.className = 'exit-circle';
+      circle.style.cssText = `
+          position: fixed;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.95);
+          box-shadow: 
+              0 0 15px 2px rgba(255, 255, 255, 0.95),
+              0 0 30px 4px rgba(255, 255, 255, 0.7),
+              0 0 45px 6px rgba(255, 255, 255, 0.4);
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          transform: scale(0);
+      `;
+      document.body.appendChild(circle);
+      circles[elementClass] = circle;
+  });
 
-    // Calculate transform based on scroll position instead of percentage
-    function calculateTransform(scrollPosition, startPosition, endPosition) {
-        const progress = Math.max(0, Math.min(1, 
-            (scrollPosition - startPosition) / (endPosition - startPosition)));
-        
-        const scale = Math.max(0.1, 1 - (progress * 0.9));
-        const translateZ = progress * -800; // Increased for more dramatic effect
-        const opacity = Math.max(0, 1 - (progress * 1.2));
-        
-        return {
-            transform: `perspective(800px) 
-                       translateZ(${translateZ}px) 
-                       scale(${scale})`,
-            opacity: opacity
-        };
-    }
+  function lerp(start, end, factor) {
+      return start + (end - start) * factor;
+  }
 
-    function updateParallax() {
-        if (!isMouseOverCanvas) {
-            currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
-            currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
+  function updateParallax() {
+      if (!isMouseOverCanvas) {
+          currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
+          currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
 
-            const scrollOffset = window.pageYOffset * 0.1;
-            document.body.style.backgroundPosition = 
-                `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
-        }
-        requestAnimationFrame(updateParallax);
-    }
+          const scrollOffset = window.pageYOffset * 0.15;
+          document.body.style.backgroundPosition = 
+              `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
+      }
+      requestAnimationFrame(updateParallax);
+  }
 
-    function handleMouseMove(e) {
-        if (!isMouseOverCanvas) {
-            const xPercentage = e.clientX / window.innerWidth;
-            const yPercentage = e.clientY / window.innerHeight;
-            targetBackgroundX = (xPercentage - 0.25) * maxMovement;
-            targetBackgroundY = (yPercentage - 0.25) * maxMovement;
-        }
-    }
+  function handleMouseMove(e) {
+      if (!isMouseOverCanvas) {
+          const xPercentage = e.clientX / window.innerWidth;
+          const yPercentage = e.clientY / window.innerHeight;
+          targetBackgroundX = (xPercentage - 0.5) * maxMovement;
+          targetBackgroundY = (yPercentage - 0.5) * maxMovement;
+      }
+  }
 
-    function applyAnimation(element, scrollPosition, startScroll, endScroll) {
-        if (!element) return;
-        
-        const { transform, opacity } = calculateTransform(scrollPosition, startScroll, endScroll);
-        
-        // Apply transforms with fixed pixel values
-        if (element.classList.contains('container')) {
-            const baseTransform = 'translate(-50%, -160%)';
-            element.style.transform = `${baseTransform} ${transform}`;
-        } else if (element.classList.contains('typing-block') || 
-                   element.classList.contains('typing-block-3') ||
-                   element.classList.contains('registration-blue')) {
-            const baseTransform = 'translateX(-50%)';
-            element.style.transform = `${baseTransform} ${transform}`;
-        } else if (element.classList.contains('feed')) {
-            const baseTransform = 'translate(-50%, 20%)';
-            element.style.transform = `${baseTransform} ${transform}`;
-        }
-        
-        element.style.opacity = opacity.toString();
-    }
+  function calculateTransform(scrollPosition, startPosition, endPosition) {
+      const progress = Math.max(0, Math.min(1, 
+          (scrollPosition - startPosition) / (endPosition - startPosition)));
+      
+      // Modified scale reduction for smoother transition
+      const scale = Math.max(0.1, 1 - (progress * 0.9));
+      // Faster opacity fade for earlier star transition
+      const opacity = Math.max(0, 1 - (progress * 2.5));
+      
+      return { progress, scale, opacity };
+  }
 
-    function handleScroll() {
-        const scrollPosition = window.pageYOffset;
-        const windowHeight = window.innerHeight;
+  function applyAnimation(element, scrollPosition, startScroll, endScroll) {
+      if (!element) return;
+      
+      const { progress, scale, opacity } = calculateTransform(scrollPosition, startScroll, endScroll);
+      const elementClass = Array.from(element.classList)[0];
+      const exitPos = exitPositions[elementClass];
+      
+      const screenHeight = window.innerHeight;
+      
+      const getResponsiveValue = (baseValue) => {
+          if (screenHeight < 700) return baseValue * 0.6;  
+          if (screenHeight < 900) return baseValue * 0.8; 
+          if (screenHeight < 1080) return baseValue;       
+          return baseValue * 1.2;                       
+      };
+      
+      // Enhanced exit animation with stronger acceleration
+      const accelerationFactor = Math.pow(progress, 1.8);
+      const exitX = exitPos.x * accelerationFactor;
+      const exitY = exitPos.y * accelerationFactor;
+      
+      // Earlier star appearance with smooth scaling
+      const circle = circles[elementClass];
+      if (circle) {
+          const rect = element.getBoundingClientRect();
+          circle.style.left = `${rect.left + (rect.width / 2)}px`;
+          circle.style.top = `${rect.top + (rect.height)}px`;
+          
+          // Start showing stars at 40% progress
+          const starProgress = progress > 0.4 ? ((progress - 0.4) * 1.67) : 0;
+          circle.style.opacity = starProgress;
+          circle.style.transform = `scale(${starProgress * 1.5})`;
+      }
+      
+      // Apply transforms
+      let baseTransform = '';
+      if (element.classList.contains('container')) {
+          let yOffset = getResponsiveValue(-160);
+          if (screenHeight < 700) yOffset = getResponsiveValue(-100);
+          baseTransform = `translate(-50%, ${yOffset}%)`;
+      } else if (element.classList.contains('typing-block') || 
+                 element.classList.contains('typing-block-3') ||
+                 element.classList.contains('registration-blue')) {
+          baseTransform = 'translateX(-50%)';
+      } else if (element.classList.contains('feed')) {
+          let yOffset = getResponsiveValue(10);
+          if (screenHeight < 900) yOffset = getResponsiveValue(30);
+          if (screenHeight < 700) yOffset = getResponsiveValue(70);
+          baseTransform = `translate(-50%, ${yOffset}%)`;
+      }
+      
+      element.style.transform = `${baseTransform} 
+          translate(${exitX}px, ${exitY}px) 
+          scale(${scale})`;
+      element.style.opacity = opacity.toString();
+  }
 
-        // Fixed scroll positions for animations (in pixels)
-        const typingStartScroll = 0;
-        const typingEndScroll = 200;
-        const registrationStartScroll = 100;
-        const registrationEndScroll = 400;
-        const containerStartScroll = 200;
-        const containerEndScroll = 500;
-        const feedStartScroll = 500;
-        const feedEndScroll = 1300;
+  function handleScroll() {
+      const scrollPosition = window.pageYOffset;
+      
+      const typingStartScroll = 0;
+      const typingEndScroll = 200;
+      const registrationStartScroll = 100;
+      const registrationEndScroll = 400;
+      const containerStartScroll = 200;
+      const containerEndScroll = 500;
+      const feedStartScroll = 500;
+      const feedEndScroll = 1000;
 
-        // Animate elements with fixed scroll values
-        applyAnimation(typingBlock, scrollPosition, typingStartScroll, typingEndScroll);
-        applyAnimation(typingBlock3, scrollPosition, typingStartScroll, typingEndScroll);
-        applyAnimation(registrationBlue, scrollPosition, registrationStartScroll, registrationEndScroll);
-        applyAnimation(container, scrollPosition, containerStartScroll, containerEndScroll);
-        applyAnimation(feed, scrollPosition, feedStartScroll, feedEndScroll);
+      applyAnimation(typingBlock, scrollPosition, typingStartScroll, typingEndScroll);
+      applyAnimation(typingBlock3, scrollPosition, typingStartScroll, typingEndScroll);
+      applyAnimation(registrationBlue, scrollPosition, registrationStartScroll, registrationEndScroll);
+      applyAnimation(container, scrollPosition, containerStartScroll, containerEndScroll);
+      applyAnimation(feed, scrollPosition, feedStartScroll, feedEndScroll);
 
-        // Handle try-free button visibility with fixed scroll position
-        if (tryFreeButton) {
-            if (scrollPosition > 600) {
-                tryFreeButton.classList.add('visible');
-            } else {
-                tryFreeButton.classList.remove('visible');
-            }
-        }
+      if (tryFreeButton) {
+          if (scrollPosition > 600) {
+              tryFreeButton.classList.add('visible');
+          } else {
+              tryFreeButton.classList.remove('visible');
+          }
+      }
 
-        lastScrollTop = scrollPosition;
-    }
+      lastScrollTop = scrollPosition;
+  }
 
-    function handleMouseLeave() {
-        targetBackgroundX = 0;
-        targetBackgroundY = 0;
-    }
+  // Add smooth transitions
+  [typingBlock, typingBlock3, registrationBlue, container, feed].forEach(element => {
+      if (element) {
+          element.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+          element.style.willChange = 'transform, opacity';
+      }
+  });
 
-    // Add event listeners
-    if (canvasContainer) {
-        canvasContainer.addEventListener('mouseenter', () => {
-            isMouseOverCanvas = true;
-            targetBackgroundX = 0;
-            targetBackgroundY = 0;
-        });
+  function handleMouseLeave() {
+      targetBackgroundX = 0;
+      targetBackgroundY = 0;
+  }
 
-        canvasContainer.addEventListener('mouseleave', () => {
-            isMouseOverCanvas = false;
-        });
-    }
+  // Event listeners for parallax
+  if (canvasContainer) {
+      canvasContainer.addEventListener('mouseenter', () => {
+          isMouseOverCanvas = true;
+          targetBackgroundX = 0;
+          targetBackgroundY = 0;
+      });
 
-    // Add smooth transitions to animated elements
-    [typingBlock, typingBlock3, registrationBlue, container, feed].forEach(element => {
-        if (element) {
-            element.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-            element.style.willChange = 'transform, opacity';
-        }
-    });
+      canvasContainer.addEventListener('mouseleave', () => {
+          isMouseOverCanvas = false;
+      });
+  }
 
-    // Throttle scroll event
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                handleScroll();
-                ticking = false;
-            });
-            ticking = true;
-        }
-    });
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('mouseleave', handleMouseLeave);
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseleave', handleMouseLeave);
+  // Throttled scroll handler
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+      if (!ticking) {
+          window.requestAnimationFrame(() => {
+              handleScroll();
+              ticking = false;
+          });
+          ticking = true;
+      }
+  });
 
-    updateParallax();
-    handleScroll();
+  // Initialize animations
+  updateParallax();
+  handleScroll();
 });
 //---------------------------------------------------INIT------------------------------------------------------------//
   document.addEventListener('DOMContentLoaded', () => {
