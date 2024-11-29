@@ -167,15 +167,15 @@ html {
   }
 
 #canvas-container {
-	width: 686px;
-	height: 440px;
+	width: 734px;
+	height: 476px;
 	position: relative;
 	overflow: hidden;
 	background-color: rgba(255, 255, 255, 0.1);
 	border-radius: 10px 10px 0 0;
 	position: relative;
     z-index: 1;
-	margin-top: 12px;
+	margin-top: 36px;
 }
 
 canvas {
@@ -219,9 +219,9 @@ canvas {
 
 .container {
   position: fixed;
-  height: 500px;
+  height: 600px;
   width: 1000px;
-  margin-top: 70px;
+  margin-top: 200px;
   display: flex;
   justify-content: center;
   transition: all 0.5s ease;
@@ -320,13 +320,26 @@ height: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  perspective: 1500px;
+            perspective-origin: 50% 100%;
+            transform-style: preserve-3d;
+            gap: 20px;
+            width: 1100px;
 }
-
+.feed img {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  will-change: transform, opacity;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  position: relative;
+  -webkit-transform: rotateX(15deg);
+    -webkit-transform-origin: bottom center;
+    min-width: 1050px;
+}
 
 .try-free {
   position: absolute;
-  top: 140vh; /* Position it far down */
+  top: 240vh; /* Position it far down */
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
