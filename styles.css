@@ -168,19 +168,21 @@ html {
 
 #canvas-container {
 	width: 734px;
-	height: 476px;
+	height: 478px;
 	position: relative;
 	overflow: hidden;
-	background-color: rgba(255, 255, 255, 0.1);
+	background: rgba(38, 38, 38, 0.5);
 	border-radius: 10px 10px 0 0;
 	position: relative;
     z-index: 1;
-	margin-top: 36px;
+	margin-top: 10px;
 }
 
 canvas {
 	width: 100%;
 	height: 100%;
+  backdrop-filter: blur(20px);
+
 }
 
 .upgrade-icon {
@@ -207,42 +209,30 @@ canvas {
 	display: none;
 }
 
-.rect {
-  position: fixed;
-  top: 16.9px;
-  height: 12.5px;
-  width: 72.4px;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  background-color: rgba(137, 137, 137);
-}
-
 .container {
   position: fixed;
   height: 600px;
   width: 1000px;
-  margin-top: 200px;
+  margin-top: 160px;
   display: flex;
   justify-content: center;
   transition: all 0.5s ease;
 }
 .laptop {
-  backdrop-filter: blur(30px);
 	top: 0;
 	position: absolute;
 }
 
 #cursor {
-
+  color: #CCCCCC;
     letter-spacing: 1px;
-    font-weight: 800;
+    font-weight: 100;
   }
+
   .typing-block {
     width: 500px;
     margin-top: 20px;
-  }
-
-  .typing-block, .typing-block-3 {
+    margin-left: -240px;
     display: flex;
     align-items: center;
     white-space: nowrap;
@@ -265,20 +255,19 @@ height: 50px;
 /* text-shadow: -2px 4px 8.2px #000000, -11px 10px 15px rgba(0, 0, 0, 0.9); */
 }
 
-.typing-block-3 {
-    margin-top: 70px;
-}
-
 .typing-block-1 {
-
-    padding-right: 10px;
+   text-height: 20px;
+   margin-top: -4px;
+   margin-left: 6px;
 }
 
-
+.suffix {
+  color: #CCCCCC;
+}
 .typing-block-2 {
   position: relative;
   margin-top: -5px;
-    width: 380px;
+
 font-style: normal;
 font-weight: 400;
 font-size: 45px;
@@ -301,7 +290,7 @@ text-edge: cap;
 text-align: center;
 color: #37779D;
   position: fixed;
-top: 220px; /* Adjust based on your header height */
+top: 170px; /* Adjust based on your header height */
 left: 50%;
 transform: translateX(-50%);
 z-index: 900;

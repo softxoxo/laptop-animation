@@ -90,12 +90,10 @@ async function initPhysics() {
   const mouseConstraint = MouseConstraint.create(engine, {
       mouse: mouse,
       constraint: {
-          stiffness: 0.1,  // Increased stiffness for better control
-          damping: 0.1,    // Added damping for smoother movement
+          stiffness: 0.1,
+          damping: 0.1,
           render: {
-              visible: true,
-              lineWidth: 1,
-              strokeStyle: 'rgba(255,255,255,0.2)'
+              visible: false,
           }
       }
   });
@@ -104,6 +102,20 @@ async function initPhysics() {
   let isMouseInContainer = false;
   let isDragging = false;
 
+  // Store the original mouse position update function
+  const originalMousePositionUpdate = mouse.mouseup.bind(mouse);
+
+  // Override mouse position update
+  mouse.mouseup = function() {
+      if (!isMouseInContainer) {
+          // If outside container, release the constraint
+          mouseConstraint.constraint.bodyB = null;
+          isDragging = false;
+          return;
+      }
+      originalMousePositionUpdate();
+  };
+
   // Mouse enter handler
   container.addEventListener('mouseenter', () => {
       isMouseInContainer = true;
@@ -111,11 +123,22 @@ async function initPhysics() {
 
   container.addEventListener('mouseleave', () => {
       isMouseInContainer = false;
+      if (isDragging) {
+          // Smoothly release the constraint
+          mouseConstraint.constraint.stiffness = 0.0001;
+          setTimeout(() => {
+              mouseConstraint.constraint.bodyB = null;
+              mouseConstraint.constraint.stiffness = 0.1;
+              isDragging = false;
+          }, 50);
+      }
   });
 
   // Handle mouse events for dragging
   render.canvas.addEventListener('mousedown', () => {
-      isDragging = true;
+      if (isMouseInContainer) {
+          isDragging = true;
+      }
   });
 
   render.canvas.addEventListener('mouseup', () => {
@@ -229,54 +252,54 @@ async function initPhysics() {
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
   const phrases = [
-    "транскрибация",
-    "перевод",
-    "конвертация",
-    "преобразование",
-    "транскрипция",
-    "расшифровка"
+      "Транскрибация в аудиотекст",
+      "Перевод в аудиотекст",
+      "Конвертация в аудиотекст",
+      "Преобразование в аудиотекст",
+      "Транскрипция в аудиотекст",
+      "Расшифровка в аудиотекст"
   ];
 
   class SpringElement {
-    constructor(element) {
-      this.element = element;
-      this.x = 0;
-      this.y = 0;
-      this.velX = 0;
-      this.velY = 0;
-      this.springConstant = 0.2;
-      this.friction = 0.8;
-    }
-
-    update(mouseX, mouseY, isHovered) {
-      if (isHovered) {
-        const rect = this.element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const dx = mouseX - centerX;
-        const dy = mouseY - centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 300 && distance > 5) {
-          const angle = Math.atan2(dy, dx);
-          const force = (50 - distance) / 8;
-          this.x = Math.cos(angle) * force;
-          this.y = Math.sin(angle) * force;
-        }
-      } else {
-        const forceX = -this.springConstant * this.x;
-        const forceY = -this.springConstant * this.y;
-        
-        this.velX = (this.velX + forceX) * this.friction;
-        this.velY = (this.velY + forceY) * this.friction;
-        
-        this.x += this.velX;
-        this.y += this.velY;
+      constructor(element) {
+          this.element = element;
+          this.x = 0;
+          this.y = 0;
+          this.velX = 0;
+          this.velY = 0;
+          this.springConstant = 0.2;
+          this.friction = 0.8;
       }
 
-      this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-    }
+      update(mouseX, mouseY, isHovered) {
+          if (isHovered) {
+              const rect = this.element.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              
+              const dx = mouseX - centerX;
+              const dy = mouseY - centerY;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance < 300 && distance > 5) {
+                  const angle = Math.atan2(dy, dx);
+                  const force = (50 - distance) / 8;
+                  this.x = Math.cos(angle) * force;
+                  this.y = Math.sin(angle) * force;
+              }
+          } else {
+              const forceX = -this.springConstant * this.x;
+              const forceY = -this.springConstant * this.y;
+              
+              this.velX = (this.velX + forceX) * this.friction;
+              this.velY = (this.velY + forceY) * this.friction;
+              
+              this.x += this.velX;
+              this.y += this.velY;
+          }
+
+          this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+      }
   }
 
   let phraseIndex = 0;
@@ -288,90 +311,97 @@ const initTextAnimation = (() => {
   let mouseY = 0;
 
   function updateSpringAnimation() {
-    springElements.forEach(element => {
-      element.update(mouseX, mouseY, isHovered);
-    });
-    requestAnimationFrame(updateSpringAnimation);
+      springElements.forEach(element => {
+          element.update(mouseX, mouseY, isHovered);
+      });
+      requestAnimationFrame(updateSpringAnimation);
   }
 
   return () => {
-    const typingBlock = document.querySelector('.typing-block');
-    const typingText = document.getElementById('typing-text');
-    const cursorElement = document.getElementById('cursor');
-    const block1 = document.querySelector('.typing-block-1');
-    const block3 = document.querySelector('.typing-block-3');
+      const typingBlock = document.querySelector('.typing-block');
+      const typingText = document.getElementById('typing-text');
+      const cursorElement = document.getElementById('cursor');
 
-    if (!typingBlock || !typingText || !cursorElement) return;
+      if (!typingBlock || !typingText || !cursorElement) return;
 
-    // Initialize spring elements for all blocks
-    springElements = [
-      new SpringElement(block1),
-      new SpringElement(typingText.parentElement), // h2.typing-block-2
-    ];
+      springElements = [new SpringElement(typingBlock)];
 
-    function typePhrase() {
-      const currentPhrase = phrases[phraseIndex];
-
-      if (!isDeleting && charIndex <= currentPhrase.length) {
-        typingText.textContent = currentPhrase.substring(0, charIndex);
-        charIndex++;
-
-        if (charIndex > currentPhrase.length) {
-          setTimeout(() => {
-            isDeleting = true;
-            requestAnimationFrame(typePhrase);
-          }, 10000);
-          return;
+      function typePhrase() {
+        const currentPhrase = phrases[phraseIndex];
+        const mainWord = currentPhrase.split(" в ")[0];
+        const suffix = " в аудиотекст";
+    
+        if (!isDeleting && charIndex <= currentPhrase.length) {
+            if (charIndex <= mainWord.length) {
+                typingText.innerHTML = currentPhrase.substring(0, charIndex);
+            } else {
+                const suffixProgress = charIndex - mainWord.length;
+                typingText.innerHTML = mainWord + 
+                    `<span class="suffix">${suffix.substring(0, suffixProgress)}</span>`;
+            }
+            charIndex++;
+    
+            if (charIndex > currentPhrase.length) {
+                setTimeout(() => {
+                    isDeleting = true;
+                    typePhrase();
+                }, 2000);
+                return;
+            }
+        } else if (isDeleting) {
+            if (charIndex <= mainWord.length) {
+                typingText.innerHTML = mainWord.substring(0, charIndex);
+            } else {
+                const suffixProgress = charIndex - mainWord.length;
+                typingText.innerHTML = mainWord + 
+                    `<span class="suffix">${suffix.substring(0, suffixProgress)}</span>`;
+            }
+            charIndex--;
+    
+            if (charIndex === -1) {
+                isDeleting = false;
+                phraseIndex = (phraseIndex + 1) % phrases.length;
+                setTimeout(() => typePhrase(), 500);
+                return;
+            }
         }
-      } else if (isDeleting && charIndex > 0) {
-        typingText.textContent = currentPhrase.substring(0, charIndex - 1);
-        charIndex--;
-      } else {
-        isDeleting = false;
-        phraseIndex = (phraseIndex + 1) % phrases.length;
-        charIndex = 0;
-        setTimeout(() => requestAnimationFrame(typePhrase), 500);
-        return;
+    
+        const delay = isDeleting ? 50 : 100;
+        setTimeout(() => typePhrase(), delay);
+    }
+
+      let cursorVisible = true;
+      function blinkCursor() {
+          cursorVisible = !cursorVisible;
+          cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
       }
+      setInterval(blinkCursor, 530);
 
-      const delay = isDeleting ? 50 : 100;
-      setTimeout(() => requestAnimationFrame(typePhrase), delay);
-    }
+      typingBlock.addEventListener('mousemove', (e) => {
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+      });
 
-    // Cursor blink
-    let cursorVisible = true;
-    function blinkCursor() {
-      cursorVisible = !cursorVisible;
-      cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
-    }
-    setInterval(blinkCursor, 530);
+      typingBlock.addEventListener('mouseenter', () => {
+          isHovered = true;
+      });
 
-    // Mouse event handlers for the entire typing block
-    typingBlock.addEventListener('mousemove', (e) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    });
+      typingBlock.addEventListener('mouseleave', () => {
+          isHovered = false;
+      });
 
-    typingBlock.addEventListener('mouseenter', () => {
-      isHovered = true;
-    });
-
-    typingBlock.addEventListener('mouseleave', () => {
-      isHovered = false;
-    });
-
-    // Start animations
-    requestAnimationFrame(typePhrase);
-    requestAnimationFrame(updateSpringAnimation);
+      requestAnimationFrame(typePhrase);
+      requestAnimationFrame(updateSpringAnimation);
   };
 })();
+
 
 //---------------------------------------------------PARALAX------------------------------------------------------------//
 
 document.addEventListener('DOMContentLoaded', () => {
   window.scrollTo(0, 0);
   window.history.scrollRestoration = 'manual';
-
+  const header = document.querySelector('.header');
   const container = document.querySelector('.container');
   const feed = document.querySelector('.feed');
   const tryFreeButton = document.querySelector('.try-free');
@@ -384,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMouseOverCanvas = false;
   
   // Parallax variables
-  const maxMovement = 15;
+  const maxMovement = 8;
   let currentBackgroundX = 0;
   let currentBackgroundY = 0;
   let targetBackgroundX = 0;
@@ -395,11 +425,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Modified exit positions for more dramatic downward movement
   const exitPositions = {
-    'typing-block': { x: -150, y: 350 },
-    'typing-block-3': { x: 150, y: 350 },
-    'registration-blue': { x: -200, y: 450 },
-    'container': { x: 200, y: 450 },
-    'feed': { x: 0, y: 550 }
+    'header': {x: 550, y: 350 },
+    'typing-block': { x: -150, y: 450 },
+    'typing-block-3': { x: 150, y: 450 },
+    'registration-blue': { x: -200, y: 350 },
+    'container': { x: 200, y: 550 },
+    'feed': { x: 400, y: 650 }
 };
 
 // Create only one star for the feed
@@ -432,20 +463,19 @@ Object.keys(exitPositions).forEach(elementClass => {
 const feedStar = document.createElement('div');
 feedStar.className = 'exit-circle';
 feedStar.style.cssText = `
-    position: fixed;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 
-        0 0 20px 4px rgba(255, 255, 255, 0.95),
-        0 0 40px 8px rgba(255, 255, 255, 0.7),
-        0 0 60px 12px rgba(255, 255, 255, 0.4);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: scale(0);
-    z-index: 1000;
+position: fixed;
+width: 4px;
+height: 4px;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.95);
+box-shadow: 
+    0 0 15px 2px rgba(255, 255, 255, 0.95),
+    0 0 30px 4px rgba(255, 255, 255, 0.7),
+    0 0 45px 6px rgba(255, 255, 255, 0.4);
+pointer-events: none;
+opacity: 0;
+transition: opacity 0.3s ease, transform 0.3s ease;
+transform: scale(0);
 `;
 document.body.appendChild(feedStar);
 
@@ -454,25 +484,26 @@ document.body.appendChild(feedStar);
   }
 
   function updateParallax() {
-      if (!isMouseOverCanvas) {
-          currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
-          currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
+    if (!isMouseOverCanvas) {
+        currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
+        currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
 
-          const scrollOffset = window.pageYOffset * 0.15;
-          document.body.style.backgroundPosition = 
-              `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
-      }
-      requestAnimationFrame(updateParallax);
-  }
+        const scrollOffset = window.pageYOffset * 0.08; // Reduced from 0.15
+        document.body.style.backgroundPosition = 
+            `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
+    }
+    requestAnimationFrame(updateParallax);
+}
 
-  function handleMouseMove(e) {
-      if (!isMouseOverCanvas) {
-          const xPercentage = e.clientX / window.innerWidth;
-          const yPercentage = e.clientY / window.innerHeight;
-          targetBackgroundX = (xPercentage - 0.5) * maxMovement;
-          targetBackgroundY = (yPercentage - 0.5) * maxMovement;
-      }
-  }
+function handleMouseMove(e) {
+    if (!isMouseOverCanvas) {
+        const xPercentage = e.clientX / window.innerWidth;
+        const yPercentage = e.clientY / window.innerHeight;
+        // Added easing to mouse movement
+        targetBackgroundX = (xPercentage - 0.5) * maxMovement * 1;
+        targetBackgroundY = (yPercentage - 0.5) * maxMovement * 1;
+    }
+}
 
   function calculateTransform(scrollPosition, startPosition, endPosition) {
     // Ensure proper progress calculation over the full scroll range
@@ -589,7 +620,9 @@ const feedImages = document.querySelectorAll('.feed img');
   function handleScroll() {
       const scrollPosition = window.pageYOffset;
       
-      const typingStartScroll = 0;
+      const headerStartScroll = 0;
+      const headerEndScroll = 300;
+      const typingStartScroll = 50;
       const typingEndScroll = 200;
       const registrationStartScroll = 100;
       const registrationEndScroll = 400;
@@ -598,8 +631,8 @@ const feedImages = document.querySelectorAll('.feed img');
       const feedStartScroll = 100;
       const feedEndScroll = 2200;
 
+      applyAnimation(header, scrollPosition, headerStartScroll, headerEndScroll);
       applyAnimation(typingBlock, scrollPosition, typingStartScroll, typingEndScroll);
-      applyAnimation(typingBlock3, scrollPosition, typingStartScroll, typingEndScroll);
       applyAnimation(registrationBlue, scrollPosition, registrationStartScroll, registrationEndScroll);
       applyAnimation(container, scrollPosition, containerStartScroll, containerEndScroll);
       applyAnimation(feed, scrollPosition, feedStartScroll, feedEndScroll);
@@ -643,17 +676,25 @@ const feedImages = document.querySelectorAll('.feed img');
 
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseleave', handleMouseLeave);
+  let lastScrollPosition = window.pageYOffset;
+  let scrollTimeout;
 
   // Throttled scroll handler
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-      if (!ticking) {
-          window.requestAnimationFrame(() => {
-              handleScroll();
-              ticking = false;
-          });
-          ticking = true;
+ window.addEventListener('scroll', () => {
+    // Clear any pending timeouts
+    clearTimeout(scrollTimeout);
+    
+    // Update scroll position immediately
+    handleScroll();
+    
+    // Set a timeout to ensure smooth movement after rapid scrolling
+    scrollTimeout = setTimeout(() => {
+      const currentPosition = window.pageYOffset;
+      if (currentPosition !== lastScrollPosition) {
+        handleScroll();
+        lastScrollPosition = currentPosition;
       }
+    }, 50);
   });
 
   // Initialize animations
