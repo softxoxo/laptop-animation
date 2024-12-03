@@ -1,3 +1,4 @@
+
 //---------------------------------------------------LAPTOP------------------------------------------------------------//
 async function initPhysics() {
   const imageLoadMap = new WeakMap();
@@ -252,12 +253,12 @@ async function initPhysics() {
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
   const phrases = [
-      "Транскрибация в аудиотекст",
-      "Перевод в аудиотекст",
-      "Конвертация в аудиотекст",
-      "Преобразование в аудиотекст",
-      "Транскрипция в аудиотекст",
-      "Расшифровка в аудиотекст"
+      "Транскрибация аудио в текст",
+      "Перевод аудио в текст",
+      "Конвертация аудио в текст",
+      "Преобразование аудио в текст",
+      "Транскрипция аудио в текст",
+      "Расшифровка аудио в текст"
   ];
 
   class SpringElement {
@@ -328,8 +329,8 @@ const initTextAnimation = (() => {
 
       function typePhrase() {
         const currentPhrase = phrases[phraseIndex];
-        const mainWord = currentPhrase.split(" в ")[0];
-        const suffix = " в аудиотекст";
+        const mainWord = currentPhrase.split(" аудио ")[0];
+        const suffix = " аудио в текст";
     
         if (!isDeleting && charIndex <= currentPhrase.length) {
             if (charIndex <= mainWord.length) {
@@ -396,19 +397,12 @@ const initTextAnimation = (() => {
 })();
 
 
-//---------------------------------------------------PARALAX------------------------------------------------------------//
+//---------------------------------------------------BG-MOVE------------------------------------------------------------//
 
-document.addEventListener('DOMContentLoaded', () => {
+const bgMove = () => {
   window.scrollTo(0, 0);
   window.history.scrollRestoration = 'manual';
-  const header = document.querySelector('.header');
-  const container = document.querySelector('.container');
-  const feed = document.querySelector('.feed');
-  const tryFreeButton = document.querySelector('.try-free');
   const canvasContainer = document.querySelector('#canvas-container');
-  const typingBlock = document.querySelector('.typing-block');
-  const typingBlock3 = document.querySelector('.typing-block-3');
-  const registrationBlue = document.querySelector('.registration-blue');
   
   let lastScrollTop = 0;
   let isMouseOverCanvas = false;
@@ -419,65 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentBackgroundY = 0;
   let targetBackgroundX = 0;
   let targetBackgroundY = 0;
-  
-  const totalScrollHeight = window.innerHeight * 2;
-  document.body.style.height = `${totalScrollHeight}px`;
-  
-  // Modified exit positions for more dramatic downward movement
-  const exitPositions = {
-    'header': {x: 550, y: 350 },
-    'typing-block': { x: -150, y: 450 },
-    'typing-block-3': { x: 150, y: 450 },
-    'registration-blue': { x: -200, y: 350 },
-    'container': { x: 200, y: 550 },
-    'feed': { x: 400, y: 650 }
-};
 
-// Create only one star for the feed
-const circles = {};
-Object.keys(exitPositions).forEach(elementClass => {
-    if (elementClass !== 'feed') {  // Create circles for non-feed elements
-        const circle = document.createElement('div');
-        circle.className = 'exit-circle';
-        circle.style.cssText = `
-            position: fixed;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 
-                0 0 15px 2px rgba(255, 255, 255, 0.95),
-                0 0 30px 4px rgba(255, 255, 255, 0.7),
-                0 0 45px 6px rgba(255, 255, 255, 0.4);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            transform: scale(0);
-        `;
-        document.body.appendChild(circle);
-        circles[elementClass] = circle;
-    }
-});
-
-// Create a single star for the feed
-const feedStar = document.createElement('div');
-feedStar.className = 'exit-circle';
-feedStar.style.cssText = `
-position: fixed;
-width: 4px;
-height: 4px;
-border-radius: 50%;
-background: rgba(255, 255, 255, 0.95);
-box-shadow: 
-    0 0 15px 2px rgba(255, 255, 255, 0.95),
-    0 0 30px 4px rgba(255, 255, 255, 0.7),
-    0 0 45px 6px rgba(255, 255, 255, 0.4);
-pointer-events: none;
-opacity: 0;
-transition: opacity 0.3s ease, transform 0.3s ease;
-transform: scale(0);
-`;
-document.body.appendChild(feedStar);
 
   function lerp(start, end, factor) {
       return start + (end - start) * factor;
@@ -488,7 +424,7 @@ document.body.appendChild(feedStar);
         currentBackgroundX = lerp(currentBackgroundX, targetBackgroundX, 0.1);
         currentBackgroundY = lerp(currentBackgroundY, targetBackgroundY, 0.1);
 
-        const scrollOffset = window.pageYOffset * 0.08; // Reduced from 0.15
+        const scrollOffset = window.pageYOffset * 0.02; 
         document.body.style.backgroundPosition = 
             `calc(50% + ${currentBackgroundX}px) calc(${-scrollOffset}px + ${currentBackgroundY}px)`;
     }
@@ -505,156 +441,6 @@ function handleMouseMove(e) {
     }
 }
 
-  function calculateTransform(scrollPosition, startPosition, endPosition) {
-    // Ensure proper progress calculation over the full scroll range
-    const progress = Math.max(0, Math.min(1, 
-        (scrollPosition - startPosition) / (endPosition - startPosition)
-    ));
-    
-    // Adjusted scale and opacity calculations
-    const scale = Math.max(0.1, 1 - progress);
-    const opacity = Math.max(0, 1 - progress);
-    
-    return { progress, scale, opacity };
-}
-
-function applyAnimation(element, scrollPosition, startScroll, endScroll) {
-  if (!element) return;
-  
-  const { progress, scale, opacity } = calculateTransform(scrollPosition, startScroll, endScroll);
-  const elementClass = Array.from(element.classList)[0];
-  const exitPos = exitPositions[elementClass];
-    
-    const screenHeight = window.innerHeight;
-    
-    const getResponsiveValue = (baseValue) => {
-        if (screenHeight < 700) return baseValue * 0.6;  
-        if (screenHeight < 900) return baseValue * 0.8; 
-        if (screenHeight < 1080) return baseValue;       
-        return baseValue * 1.2;                       
-    };
-
-    if (elementClass === 'feed') {
-      const feedImages = Array.from(element.querySelectorAll('img'));
-      const totalImages = feedImages.length;
-      const delayBetweenItems = 0.1;
-
-      feedImages.forEach((img, index) => {
-        const delayedProgress = Math.min(1, Math.max(0, 
-          (progress * 1.6) - (index * delayBetweenItems)
-      ));
-          const itemScale = Math.max(0.1, 1 - (delayedProgress * 0.8));
-          // Adjusted opacity calculation to ensure complete fade out
-          const itemOpacity = Math.max(0, Math.min(1, 2 - (delayedProgress * 2)));
-          
-          const accelerationFactor = Math.pow(delayedProgress, 2);
-          const exitX = exitPos.x * accelerationFactor;
-          const exitY = exitPos.y * accelerationFactor;
-
-          img.style.transform = `
-              translate3d(${exitX}px, ${exitY}px, 0)
-              scale(${itemScale})
-              rotateX(15deg)
-          `;
-          img.style.transformOrigin = 'bottom center';
-          img.style.opacity = itemOpacity.toString();
-          
-          if (index === totalImages - 1) {
-              const rect = img.getBoundingClientRect();
-              feedStar.style.left = `${rect.left + (rect.width / 2)}px`;
-              feedStar.style.top = `${rect.top + rect.height}px`;
-              
-              const starProgress = delayedProgress > 0.6 ? ((delayedProgress - 0.6) * 1.67) : 0;
-              feedStar.style.opacity = starProgress;
-              feedStar.style.transform = `scale(${starProgress * 2.5})`;
-          }
-      });
-
-      // Apply base transform to feed container with perspective
-      let yOffset = getResponsiveValue(10);
-      if (screenHeight < 900) yOffset = getResponsiveValue(30);
-      if (screenHeight < 700) yOffset = getResponsiveValue(70);
-      
-      element.style.transform = `translate(-50%, ${yOffset}%) rotateX(15deg)`;
-  } else {
-        // Original animation code for non-feed elements
-        const accelerationFactor = Math.pow(progress, 1.8);
-        const exitX = exitPos.x * accelerationFactor;
-        const exitY = exitPos.y * accelerationFactor;
-        
-        const circle = circles[elementClass];
-        if (circle) {
-            const rect = element.getBoundingClientRect();
-            circle.style.left = `${rect.left + (rect.width / 2)}px`;
-            circle.style.top = `${rect.top + rect.height}px`;
-            
-            const starProgress = progress > 0.4 ? ((progress - 0.4) * 1.67) : 0;
-            circle.style.opacity = starProgress;
-            circle.style.transform = `scale(${starProgress * 1.5})`;
-        }
-        
-        let baseTransform = '';
-        if (element.classList.contains('container')) {
-            let yOffset = getResponsiveValue(-160);
-            if (screenHeight < 700) yOffset = getResponsiveValue(-100);
-            baseTransform = `translate(-50%, ${yOffset}%)`;
-        } else if (element.classList.contains('typing-block') || 
-                  element.classList.contains('typing-block-3') ||
-                  element.classList.contains('registration-blue')) {
-            baseTransform = 'translateX(-50%)';
-        }
-        
-        element.style.transform = `${baseTransform} 
-            translate(${exitX}px, ${exitY}px) 
-            scale(${scale})`;
-        element.style.opacity = opacity.toString();
-    }
-}
-
-const feedImages = document.querySelectorAll('.feed img');
-    feedImages.forEach(img => {
-        img.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-        img.style.willChange = 'transform, opacity';
-    });
-
-  function handleScroll() {
-      const scrollPosition = window.pageYOffset;
-      
-      const headerStartScroll = 0;
-      const headerEndScroll = 300;
-      const typingStartScroll = 50;
-      const typingEndScroll = 200;
-      const registrationStartScroll = 100;
-      const registrationEndScroll = 400;
-      const containerStartScroll = 200;
-      const containerEndScroll = 500;
-      const feedStartScroll = 100;
-      const feedEndScroll = 2200;
-
-      applyAnimation(header, scrollPosition, headerStartScroll, headerEndScroll);
-      applyAnimation(typingBlock, scrollPosition, typingStartScroll, typingEndScroll);
-      applyAnimation(registrationBlue, scrollPosition, registrationStartScroll, registrationEndScroll);
-      applyAnimation(container, scrollPosition, containerStartScroll, containerEndScroll);
-      applyAnimation(feed, scrollPosition, feedStartScroll, feedEndScroll);
-
-      if (tryFreeButton) {
-          if (scrollPosition > 600) {
-              tryFreeButton.classList.add('visible');
-          } else {
-              tryFreeButton.classList.remove('visible');
-          }
-      }
-
-      lastScrollTop = scrollPosition;
-  }
-
-  // Add smooth transitions
-  [typingBlock, typingBlock3, registrationBlue, container, feed].forEach(element => {
-      if (element) {
-          element.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-          element.style.willChange = 'transform, opacity';
-      }
-  });
 
   function handleMouseLeave() {
       targetBackgroundX = 0;
@@ -676,36 +462,9 @@ const feedImages = document.querySelectorAll('.feed img');
 
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseleave', handleMouseLeave);
-  let lastScrollPosition = window.pageYOffset;
-  let scrollTimeout;
 
-  // Throttled scroll handler
- window.addEventListener('scroll', () => {
-    // Clear any pending timeouts
-    clearTimeout(scrollTimeout);
-    
-    // Update scroll position immediately
-    handleScroll();
-    
-    // Set a timeout to ensure smooth movement after rapid scrolling
-    scrollTimeout = setTimeout(() => {
-      const currentPosition = window.pageYOffset;
-      if (currentPosition !== lastScrollPosition) {
-        handleScroll();
-        lastScrollPosition = currentPosition;
-      }
-    }, 50);
-  });
-
-  // Initialize animations
   updateParallax();
-  handleScroll();
-});
-//---------------------------------------------------INIT------------------------------------------------------------//
-  document.addEventListener('DOMContentLoaded', () => {
-    initPhysics();
-    initTextAnimation();
-});
+}
   
 //---------------------------------------------------HEADER------------------------------------------------------------//
   function makeButtonClickable(button) {
@@ -763,4 +522,131 @@ const feedImages = document.querySelectorAll('.feed img');
   const menuItems = document.querySelectorAll(".menu-item");
   menuItems.forEach((i) => makeButtonClickable(i));
   
-//---------------------------------------------------BACKGROUND------------------------------------------------------------//
+//---------------------------------------------------INIT-ANIMATIONS------------------------------------------------------------//
+const initAnimations = () => {
+    const container = document.querySelector('.container');
+    const laptop = document.querySelector('.laptop');
+    const canvasContainer = document.querySelector('#canvas-container');
+    const header = document.querySelector('.header');
+    const typingBlock = document.querySelector('.typing-block');
+    const typingBlock2 = document.querySelector('.typing-block-2');
+    const registrationBlue = document.querySelector('.registration-blue');
+    const feed = document.querySelector('.feed');
+    const tryFreeButton = document.querySelector('.try-free');
+
+    // Reset scroll position on page load
+    window.scrollTo(0, 0);
+
+    // Initial animation for container
+    container.offsetHeight;
+    container.style.transition = 'transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1.4s ease-out';
+    container.style.transform = 'scale(1)';
+    container.style.opacity = '1';
+
+    const endPositions = {
+        header: {x: 550, y: 350},
+        typingBlock: {x: -150, y: 450},
+        registration: {x: -200, y: 350},
+        container: {x: 200, y: 550},
+        feed: {x: 400, y: 650}
+    };
+
+    const scrollRanges = {
+        header: { start: 0, end: 1000 },
+        typingBlock: { start: 700, end: 1200 },
+        registration: { start: 900, end: 1400 },
+        container: { start: 1100, end: 1600 },
+        feed: { start: 1300, end: 1300 }
+    };
+
+    const baseSpeed = 0.15;
+    const scrollSpeed = baseSpeed * 7;
+
+    const calculateProgress = (currentScroll, start, end) => {
+        if (currentScroll < start) return 0;
+        if (currentScroll > end) return 1;
+        return (currentScroll - start) / (end - start);
+    };
+
+    const updateElement = (element, scrollPosition, range, endPos) => {
+        const progress = calculateProgress(scrollPosition, range.start, range.end);
+        const baseScroll = scrollPosition * scrollSpeed;
+    
+        if (progress === 0) {
+            // Restore normal state
+            element.style.transform = `translateY(${baseScroll}px)`;
+            element.style.opacity = '1';
+            element.style.boxShadow = 'none';
+            element.style.backgroundColor = '';
+            element.style.width = '';
+            element.style.height = '';
+            element.style.borderRadius = '';
+            
+            // Show all child elements and restore text content
+            Array.from(element.children).forEach(child => {
+                child.style.opacity = '1';
+            });
+    
+            // Special handling for registration-blue
+            if (element.classList.contains('registration-blue')) {
+                const textSpan = element.querySelector('span');
+                if (textSpan) {
+                    textSpan.textContent = 'Registration';
+                }
+            }
+        } else if (progress > 0.9) {
+            // Star state
+            const xOffset = endPos.x * 0.8;
+            const yOffset = (range.start + (range.end - range.start) * 0.8) * scrollSpeed + (endPos.y * 0.8);
+                
+            element.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+            element.style.opacity = '1';
+            
+            // Hide children and clear text
+            Array.from(element.children).forEach(child => {
+                child.style.opacity = '0';
+            });
+            if (element.classList.contains('registration-blue')) {
+                element.textContent = '';
+            }
+    
+            element.style.width = '4px';
+            element.style.height = '4px';
+            element.style.borderRadius = '50%';
+            element.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            element.style.boxShadow = `
+                0 0 15px 2px rgba(255, 255, 255, 0.95),
+                0 0 30px 4px rgba(255, 255, 255, 0.7),
+                0 0 45px 6px rgba(255, 255, 255, 0.4)
+            `;
+        } else {
+            const scale = Math.max(0.01, 1 - progress);
+            const xOffset = endPos.x * progress;
+            const yOffset = baseScroll + (endPos.y * progress);
+                
+            element.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale})`;
+            element.style.opacity = Math.max(0.2, 1 - (progress * 0.6));
+        }
+    };
+
+    const updateParallax = (scrollPosition) => {
+        updateElement(header, scrollPosition, scrollRanges.header, endPositions.header);
+        updateElement(typingBlock2, scrollPosition, scrollRanges.typingBlock, endPositions.typingBlock);
+        updateElement(registrationBlue, scrollPosition, scrollRanges.registration, endPositions.registration);
+        updateElement(container, scrollPosition, scrollRanges.container, endPositions.container);
+        updateElement(feed, scrollPosition, scrollRanges.feed, endPositions.feed);
+    };
+
+    window.addEventListener('scroll', () => {
+        requestAnimationFrame(() => {
+            updateParallax(window.scrollY);
+        });
+    });
+}
+//---------------------------------------------------INIT------------------------------------------------------------//
+document.addEventListener('DOMContentLoaded', () => {
+    initAnimations();
+    bgMove();
+    initPhysics();
+    initTextAnimation();
+});
