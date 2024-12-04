@@ -545,18 +545,18 @@ const initAnimations = () => {
 
     const endPositions = {
         header: {x: 550, y: 350},
-        typingBlock: {x: -150, y: 450},
-        registration: {x: -200, y: 350},
+        typingBlock: {x: 1000, y: 50},
+        registration: {x: -1000, y: 50},
         container: {x: 200, y: 550},
-        feed: {x: 400, y: 650}
+        feed: {x: 400, y: 600}
     };
 
     const scrollRanges = {
         header: { start: 0, end: 1000 },
-        typingBlock: { start: 700, end: 1200 },
-        registration: { start: 900, end: 1400 },
-        container: { start: 1100, end: 1600 },
-        feed: { start: 1300, end: 1300 }
+        typingBlock: { start: 200, end: 1200 },
+        registration: { start: 300, end: 1400 },
+        container: { start: 1100, end: 1400 },
+        feed: { start: 1800, end: 3000 }
     };
 
     const baseSpeed = 0.15;
@@ -568,65 +568,102 @@ const initAnimations = () => {
         return (currentScroll - start) / (end - start);
     };
 
+    const initializeTransitions = (element) => {
+        element.style.transition = `
+            transform 0.3s ease-out,
+            opacity 0.3s ease-out,
+            width 0.3s ease-out,
+            height 0.3s ease-out,
+            border-radius 0.3s ease-out,
+            background-color 0.3s ease-in 0.1s,
+            box-shadow 0.3s ease-in 0.1s
+        `;
+    
+        Array.from(element.children).forEach(child => {
+            child.style.transition = 'opacity 0.3s ease-out';
+        });
+    };
+    
     const updateElement = (element, scrollPosition, range, endPos) => {
+        if (!element.style.transition) {
+            initializeTransitions(element);
+        }
+    
         const progress = calculateProgress(scrollPosition, range.start, range.end);
         const baseScroll = scrollPosition * scrollSpeed;
-    
-        if (progress === 0) {
-            // Restore normal state
+        if (progress === 0 ) {
             element.style.transform = `translateY(${baseScroll}px)`;
+            if (element.classList.contains('feed')) {
+                element.style.transform = `translateY(${scrollPosition * (scrollSpeed - 0.3)}px)`;
+            }
             element.style.opacity = '1';
-            element.style.boxShadow = 'none';
-            element.style.backgroundColor = '';
             element.style.width = '';
             element.style.height = '';
-            element.style.borderRadius = '';
+            element.style.borderRadius = '0';
+            element.style.backgroundColor = '';
+            element.style.boxShadow = 'none';
             
-            // Show all child elements and restore text content
             Array.from(element.children).forEach(child => {
                 child.style.opacity = '1';
             });
     
-            // Special handling for registration-blue
             if (element.classList.contains('registration-blue')) {
                 const textSpan = element.querySelector('span');
                 if (textSpan) {
                     textSpan.textContent = 'Registration';
                 }
             }
-        } else if (progress > 0.9) {
-            // Star state
-            const xOffset = endPos.x * 0.8;
-            const yOffset = (range.start + (range.end - range.start) * 0.8) * scrollSpeed + (endPos.y * 0.8);
-                
-            element.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
-            element.style.opacity = '1';
-            
-            // Hide children and clear text
-            Array.from(element.children).forEach(child => {
-                child.style.opacity = '0';
-            });
-            if (element.classList.contains('registration-blue')) {
-                element.textContent = '';
-            }
-    
-            element.style.width = '4px';
-            element.style.height = '4px';
-            element.style.borderRadius = '50%';
-            element.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            element.style.boxShadow = `
-                0 0 15px 2px rgba(255, 255, 255, 0.95),
-                0 0 30px 4px rgba(255, 255, 255, 0.7),
-                0 0 45px 6px rgba(255, 255, 255, 0.4)
-            `;
-        } else {
+        } else if (progress <= 0.999) {
+
+            element.style.backgroundColor = '';
+            element.style.boxShadow = 'none';
             const scale = Math.max(0.01, 1 - progress);
             const xOffset = endPos.x * progress;
-            const yOffset = baseScroll + (endPos.y * progress);
-                
+            const yOffset = baseScroll;
+
+                if (element.classList.contains('registration-blue')) {
+                element.textContent = 'При регистрации дарим 30 минут!';
+            }
+            element.style.width = '';
+            element.style.height = '';
+            element.style.borderRadius = '0';
+            Array.from(element.children).forEach(child => {
+                child.style.opacity = '1';
+            });
             element.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale})`;
-            element.style.opacity = Math.max(0.2, 1 - (progress * 0.6));
-        }
+
+        } else if (progress > 0.999) {
+            const xOffset = endPos.x;
+            const yOffset = (range.start + (range.end - range.start)) * scrollSpeed + (endPos.y);
+            
+            // First hide the element
+            element.style.opacity = '0';
+            setTimeout(() => {
+                element.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+                element.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                element.style.boxShadow = `
+                    0 0 15px 2px rgba(255, 255, 255, 0.95),
+                    0 0 30px 4px rgba(255, 255, 255, 0.7),
+                    0 0 45px 6px rgba(255, 255, 255, 0.4)
+                `;
+                element.style.width = '4px';
+                element.style.height = '4px';
+                element.style.borderRadius = '50%';
+                if (element.classList.contains('registration-blue')) {
+                    element.textContent = '';
+                }
+                Array.from(element.children).forEach(child => {
+                    child.style.opacity = '0';
+                });
+            }, 300);
+            // Apply styles after a brief delay
+            setTimeout(() => {
+                setTimeout(() => {
+                    element.style.opacity = '1';
+                }, 50);
+            }, 500);
+            
+        } 
     };
 
     const updateParallax = (scrollPosition) => {
@@ -650,3 +687,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initPhysics();
     initTextAnimation();
 });
+    

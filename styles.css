@@ -276,7 +276,8 @@ height: 50px;
             transform-style: preserve-3d;
             gap: 20px;
             width: 1100px;
-            margin-top: 100px;
+            margin-top: 900px;
+            position: absolute;
 }
 .feed img {
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
@@ -745,6 +746,10 @@ height: 50px;
   
 
   .laptop, #canvas-container, .header, .typing-block-2, .registration-blue, .feed, .try-free {
-  will-change: transform;
-  transition: transform 0.1s linear;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
 }
