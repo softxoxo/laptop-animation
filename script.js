@@ -252,150 +252,201 @@ async function initPhysics() {
 }
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
-  const phrases = [
-      "Транскрибация аудио в текст",
-      "Перевод аудио в текст",
-      "Конвертация аудио в текст",
-      "Преобразование аудио в текст",
-      "Транскрипция аудио в текст",
-      "Расшифровка аудио в текст"
-  ];
+    const phrases = [
+        "Транскрибация аудио в текст",
+        "Перевод аудио в текст",
+        "Конвертация аудио в текст",
+        "Преобразование аудио в текст",
+        "Транскрипция аудио в текст",
+        "Расшифровка аудио в текст"
+    ];
 
-  class SpringElement {
-      constructor(element) {
-          this.element = element;
-          this.x = 0;
-          this.y = 0;
-          this.velX = 0;
-          this.velY = 0;
-          this.springConstant = 0.2;
-          this.friction = 0.8;
-      }
-
-      update(mouseX, mouseY, isHovered) {
-          if (isHovered) {
-              const rect = this.element.getBoundingClientRect();
-              const centerX = rect.left + rect.width / 2;
-              const centerY = rect.top + rect.height / 2;
-              
-              const dx = mouseX - centerX;
-              const dy = mouseY - centerY;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              if (distance < 300 && distance > 5) {
-                  const angle = Math.atan2(dy, dx);
-                  const force = (50 - distance) / 8;
-                  this.x = Math.cos(angle) * force;
-                  this.y = Math.sin(angle) * force;
-              }
-          } else {
-              const forceX = -this.springConstant * this.x;
-              const forceY = -this.springConstant * this.y;
-              
-              this.velX = (this.velX + forceX) * this.friction;
-              this.velY = (this.velY + forceY) * this.friction;
-              
-              this.x += this.velX;
-              this.y += this.velY;
-          }
-
-          this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-      }
-  }
-
-  let phraseIndex = 0;
-  let charIndex = 0;
-  let isDeleting = false;
-  let springElements = [];
-  let isHovered = false;
-  let mouseX = 0;
-  let mouseY = 0;
-
-  function updateSpringAnimation() {
-      springElements.forEach(element => {
-          element.update(mouseX, mouseY, isHovered);
-      });
-      requestAnimationFrame(updateSpringAnimation);
-  }
-
-  return () => {
-      const typingBlock = document.querySelector('.typing-block');
-      const typingText = document.getElementById('typing-text');
-      const cursorElement = document.getElementById('cursor');
-
-      if (!typingBlock || !typingText || !cursorElement) return;
-
-      springElements = [new SpringElement(typingBlock)];
-
-      function typePhrase() {
-        const currentPhrase = phrases[phraseIndex];
-        const mainWord = currentPhrase.split(" аудио ")[0];
-        const suffix = " аудио в текст";
-    
-        if (!isDeleting && charIndex <= currentPhrase.length) {
-            if (charIndex <= mainWord.length) {
-                typingText.innerHTML = currentPhrase.substring(0, charIndex);
-            } else {
-                const suffixProgress = charIndex - mainWord.length;
-                typingText.innerHTML = mainWord + 
-                    `<span class="suffix">${suffix.substring(0, suffixProgress)}</span>`;
-            }
-            charIndex++;
-    
-            if (charIndex > currentPhrase.length) {
-                setTimeout(() => {
-                    isDeleting = true;
-                    typePhrase();
-                }, 2000);
-                return;
-            }
-        } else if (isDeleting) {
-            if (charIndex <= mainWord.length) {
-                typingText.innerHTML = mainWord.substring(0, charIndex);
-            } else {
-                const suffixProgress = charIndex - mainWord.length;
-                typingText.innerHTML = mainWord + 
-                    `<span class="suffix">${suffix.substring(0, suffixProgress)}</span>`;
-            }
-            charIndex--;
-    
-            if (charIndex === -1) {
-                isDeleting = false;
-                phraseIndex = (phraseIndex + 1) % phrases.length;
-                setTimeout(() => typePhrase(), 500);
-                return;
-            }
+    class SpringElement {
+        constructor(element) {
+            this.element = element;
+            this.x = 0;
+            this.y = 0;
+            this.velX = 0;
+            this.velY = 0;
+            this.springConstant = 0.2;
+            this.friction = 0.9;
         }
-    
-        const delay = isDeleting ? 50 : 100;
-        setTimeout(() => typePhrase(), delay);
+
+        update(mouseX, mouseY, isHovered) {
+            if (isHovered) {
+                const rect = this.element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                const dx = mouseX - centerX;
+                const dy = mouseY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 300 && distance > 5) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = (50 - distance) / 8;
+                    this.x = Math.cos(angle) * force;
+                    this.y = Math.sin(angle) * force;
+                }
+            } else {
+                const forceX = -this.springConstant * this.x;
+                const forceY = -this.springConstant * this.y;
+                
+                this.velX = (this.velX + forceX) * this.friction;
+                this.velY = (this.velY + forceY) * this.friction;
+                
+                this.x += this.velX;
+                this.y += this.velY;
+            }
+
+            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+        }
     }
 
-      let cursorVisible = true;
-      function blinkCursor() {
-          cursorVisible = !cursorVisible;
-          cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
-      }
-      setInterval(blinkCursor, 530);
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    let springElements = [];
+    let isHovered = false;
+    let mouseX = 0;
+    let mouseY = 0;
 
-      typingBlock.addEventListener('mousemove', (e) => {
-          mouseX = e.clientX;
-          mouseY = e.clientY;
-      });
+    function createLetterSpan(char) {
+        const span = document.createElement('span');
+        span.textContent = char;
+        
+        if (char === ' ') {
+            span.style.display = 'inline';
+            span.style.marginRight = '0.15em'; // Adds space between words
+        } else {
+            span.style.display = 'inline-block';
+            span.style.position = 'relative';
+        }
+        
+        return span;
+    }
 
-      typingBlock.addEventListener('mouseenter', () => {
-          isHovered = true;
-      });
+    function wrapLettersInSpans(text) {
+        return [...text].map(char => {
+            const span = createLetterSpan(char);
+            return span;
+        });
+    }
 
-      typingBlock.addEventListener('mouseleave', () => {
-          isHovered = false;
-      });
+    function updateSpringAnimation() {
+        springElements.forEach(element => {
+            element.update(mouseX, mouseY, isHovered);
+        });
+        requestAnimationFrame(updateSpringAnimation);
+    }
 
-      requestAnimationFrame(typePhrase);
-      requestAnimationFrame(updateSpringAnimation);
-  };
+    return () => {
+        const typingBlock = document.querySelector('.typing-block');
+        const typingText = document.getElementById('typing-text');
+        const cursorElement = document.getElementById('cursor');
+
+        if (!typingBlock || !typingText || !cursorElement) return;
+
+        function updateSpringElements() {
+            springElements = [];
+            typingText.querySelectorAll('span').forEach(span => {
+                springElements.push(new SpringElement(span));
+            });
+        }
+
+        function typePhrase() {
+            const currentPhrase = phrases[phraseIndex];
+            const mainWord = currentPhrase.split(" аудио ")[0];
+            const suffix = " аудио в текст";
+
+            if (!isDeleting && charIndex <= currentPhrase.length) {
+                if (charIndex <= mainWord.length) {
+                    typingText.innerHTML = '';
+                    const letterSpans = wrapLettersInSpans(mainWord.substring(0, charIndex));
+                    letterSpans.forEach(span => typingText.appendChild(span));
+                } else {
+                    const suffixProgress = charIndex - mainWord.length;
+                    typingText.innerHTML = '';
+                    
+                    const mainLetterSpans = wrapLettersInSpans(mainWord);
+                    mainLetterSpans.forEach(span => typingText.appendChild(span));
+                    
+                    const suffixSpan = document.createElement('span');
+                    suffixSpan.className = 'suffix';
+                    const suffixLetterSpans = wrapLettersInSpans(suffix.substring(0, suffixProgress));
+                    suffixLetterSpans.forEach(span => suffixSpan.appendChild(span));
+                    typingText.appendChild(suffixSpan);
+                }
+                
+                updateSpringElements();
+                charIndex++;
+
+                if (charIndex > currentPhrase.length) {
+                    setTimeout(() => {
+                        isDeleting = true;
+                        typePhrase();
+                    }, 2000);
+                    return;
+                }
+            } else if (isDeleting) {
+                if (charIndex <= mainWord.length) {
+                    typingText.innerHTML = '';
+                    const letterSpans = wrapLettersInSpans(mainWord.substring(0, charIndex));
+                    letterSpans.forEach(span => typingText.appendChild(span));
+                } else {
+                    const suffixProgress = charIndex - mainWord.length;
+                    typingText.innerHTML = '';
+                    
+                    const mainLetterSpans = wrapLettersInSpans(mainWord);
+                    mainLetterSpans.forEach(span => typingText.appendChild(span));
+                    
+                    const suffixSpan = document.createElement('span');
+                    suffixSpan.className = 'suffix';
+                    const suffixLetterSpans = wrapLettersInSpans(suffix.substring(0, suffixProgress));
+                    suffixLetterSpans.forEach(span => suffixSpan.appendChild(span));
+                    typingText.appendChild(suffixSpan);
+                }
+                
+                updateSpringElements();
+                charIndex--;
+
+                if (charIndex === -1) {
+                    isDeleting = false;
+                    phraseIndex = (phraseIndex + 1) % phrases.length;
+                    setTimeout(() => typePhrase(), 500);
+                    return;
+                }
+            }
+
+            const delay = isDeleting ? 50 : 100;
+            setTimeout(() => typePhrase(), delay);
+        }
+
+        let cursorVisible = true;
+        function blinkCursor() {
+            cursorVisible = !cursorVisible;
+            cursorElement.style.visibility = cursorVisible ? 'visible' : 'hidden';
+        }
+        setInterval(blinkCursor, 530);
+
+        typingBlock.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        typingBlock.addEventListener('mouseenter', () => {
+            isHovered = true;
+        });
+
+        typingBlock.addEventListener('mouseleave', () => {
+            isHovered = false;
+        });
+
+        requestAnimationFrame(typePhrase);
+        requestAnimationFrame(updateSpringAnimation);
+    };
+    
 })();
-
 
 //---------------------------------------------------BG-MOVE------------------------------------------------------------//
 
@@ -545,8 +596,8 @@ const initAnimations = () => {
 
     const endPositions = {
         header: {x: 550, y: 350},
-        typingBlock: {x: 1000, y: 50},
-        registration: {x: -1000, y: 50},
+        typingBlock: {x: 400, y: 50},
+        registration: {x: -400, y: 50},
         container: {x: 200, y: 550},
         feed: {x: 400, y: 600}
     };
@@ -591,7 +642,39 @@ const initAnimations = () => {
     
         const progress = calculateProgress(scrollPosition, range.start, range.end);
         const baseScroll = scrollPosition * scrollSpeed;
-        if (progress === 0 ) {
+        const TRANSITION_POINT = 0.9672727272727273;
+    if (element.classList.contains('container')) {
+        console.log(progress);
+    }
+        if (progress < 0.999999 && progress > 0.66 ) {
+            // First set opacity to 0
+            element.style.opacity = '0';
+            
+            setTimeout(() => {
+                // Apply normal styles after fade out
+                element.style.backgroundColor = '';
+                element.style.boxShadow = 'none';
+                const scale = Math.max(0.01, 1 - progress);
+                const xOffset = endPos.x * progress;
+                const yOffset = baseScroll;
+    
+                if (element.classList.contains('registration-blue')) {
+                    element.textContent = 'При регистрации дарим 30 минут!';
+                }
+                element.style.width = '';
+                element.style.height = '';
+                element.style.borderRadius = '0';
+                Array.from(element.children).forEach(child => {
+                    child.style.opacity = '1';
+                });
+                element.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale})`;
+                
+                // Fade back in
+                setTimeout(() => {
+                    element.style.opacity = '1';
+                }, 300);
+            }, 500);
+        } else if (progress === 0) {
             element.style.transform = `translateY(${baseScroll}px)`;
             if (element.classList.contains('feed')) {
                 element.style.transform = `translateY(${scrollPosition * (scrollSpeed - 0.3)}px)`;
@@ -613,31 +696,13 @@ const initAnimations = () => {
                     textSpan.textContent = 'Registration';
                 }
             }
-        } else if (progress <= 0.999) {
-
-            element.style.backgroundColor = '';
-            element.style.boxShadow = 'none';
-            const scale = Math.max(0.01, 1 - progress);
-            const xOffset = endPos.x * progress;
-            const yOffset = baseScroll;
-
-                if (element.classList.contains('registration-blue')) {
-                element.textContent = 'При регистрации дарим 30 минут!';
-            }
-            element.style.width = '';
-            element.style.height = '';
-            element.style.borderRadius = '0';
-            Array.from(element.children).forEach(child => {
-                child.style.opacity = '1';
-            });
-            element.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale})`;
-
         } else if (progress > 0.999) {
+            // Star state
+            element.style.opacity = '0';
+            
             const xOffset = endPos.x;
             const yOffset = (range.start + (range.end - range.start)) * scrollSpeed + (endPos.y);
             
-            // First hide the element
-            element.style.opacity = '0';
             setTimeout(() => {
                 element.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
                 element.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
@@ -649,21 +714,39 @@ const initAnimations = () => {
                 element.style.width = '4px';
                 element.style.height = '4px';
                 element.style.borderRadius = '50%';
+                
                 if (element.classList.contains('registration-blue')) {
                     element.textContent = '';
                 }
+                
                 Array.from(element.children).forEach(child => {
                     child.style.opacity = '0';
                 });
-            }, 300);
-            // Apply styles after a brief delay
-            setTimeout(() => {
+                
                 setTimeout(() => {
                     element.style.opacity = '1';
-                }, 50);
+                }, 300);
             }, 500);
-            
-        } 
+        } else {
+            element.style.opacity = '0';
+            element.style.backgroundColor = '';
+            element.style.boxShadow = 'none';
+            const scale = Math.max(0.01, 1 - progress);
+            const xOffset = endPos.x * progress;
+            const yOffset = baseScroll;
+    
+            if (element.classList.contains('registration-blue')) {
+                element.textContent = 'При регистрации дарим 30 минут!';
+            }
+            element.style.width = '';
+            element.style.height = '';
+            element.style.borderRadius = '0';
+            Array.from(element.children).forEach(child => {
+                child.style.opacity = '1';
+            });
+            element.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale})`;
+            element.style.opacity = '1';
+        }
     };
 
     const updateParallax = (scrollPosition) => {
@@ -674,11 +757,12 @@ const initAnimations = () => {
         updateElement(feed, scrollPosition, scrollRanges.feed, endPositions.feed);
     };
 
-    window.addEventListener('scroll', () => {
-        requestAnimationFrame(() => {
+
+    window.addEventListener('wheel', (event) => {
+
             updateParallax(window.scrollY);
         });
-    });
+
 }
 //---------------------------------------------------INIT------------------------------------------------------------//
 document.addEventListener('DOMContentLoaded', () => {
