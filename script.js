@@ -1,255 +1,231 @@
-
 //---------------------------------------------------LAPTOP------------------------------------------------------------//
 async function initPhysics() {
-  const imageLoadMap = new WeakMap();
+    const imageLoadMap = new WeakMap();
+    
+    const imgElements = Array.from(document.querySelectorAll('.svg-sprites img'));
+    await Promise.all(imgElements.map(img => {
+        if (imageLoadMap.has(img)) return imageLoadMap.get(img);
+        const promise = new Promise((resolve) => {
+            if (img.complete) resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+        });
+        imageLoadMap.set(img, promise);
+        return promise;
+    }));
   
-  const imgElements = Array.from(document.querySelectorAll('.svg-sprites img'));
-  await Promise.all(imgElements.map(img => {
-      if (imageLoadMap.has(img)) return imageLoadMap.get(img);
-      const promise = new Promise((resolve) => {
-          if (img.complete) resolve();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-      });
-      imageLoadMap.set(img, promise);
-      return promise;
-  }));
-
-  const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Body, Vector, World } = Matter;
-
-  const engine = Engine.create({
-      gravity: { x: 0, y: 0.5 },
-      enableSleeping: true,
-      constraintIterations: 2
-  });
+    const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Body, Vector, World } = Matter;
   
-  const world = engine.world;
-  const container = document.getElementById('canvas-container');
+    const engine = Engine.create({
+        gravity: { x: 0, y: 0.5 },
+        enableSleeping: true,
+        constraintIterations: 2
+    });
+    
+    const world = engine.world;
+    const container = document.getElementById('canvas-container');
+    
+    const render = Render.create({
+        element: container,
+        engine: engine,
+        options: {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            wireframes: false,
+            background: 'transparent',
+            pixelRatio: Math.min(window.devicePixelRatio, 2),
+            showSleeping: false,
+            showDebug: false
+        }
+    });
   
-  const render = Render.create({
-      element: container,
-      engine: engine,
-      options: {
-          width: container.clientWidth,
-          height: container.clientHeight,
-          wireframes: false,
-          background: 'transparent',
-          pixelRatio: Math.min(window.devicePixelRatio, 2),
-          showSleeping: false,
-          showDebug: false
-      }
-  });
-
-  const wallOptions = {
-      isStatic: true,
-      render: { visible: false },
-      friction: 0,
-      restitution: 0.7,
-      chamfer: { radius: 0 }
-  };
-
-  const containerWidth = container.clientWidth;
-  const containerHeight = container.clientHeight;
-  const walls = [
-      Bodies.rectangle(containerWidth / 2, containerHeight + 30, containerWidth, 60, wallOptions),
-      Bodies.rectangle(-30, containerHeight / 2, 60, containerHeight, wallOptions),
-      Bodies.rectangle(containerWidth + 30, containerHeight / 2, 60, containerHeight, wallOptions)
-  ];
-
-  const bodyOptions = {
-      restitution: 0.7,
-      friction: 0.01,
-      frictionAir: 0.005,
-      density: 0.002,
-      slop: 0,
-      chamfer: { radius: 2 }
-  };
-
-  const bodies = imgElements.map((img, index) => {
-      const width = img.naturalWidth || img.width;
-      const height = img.naturalHeight || img.height;
-      
-      return Bodies.rectangle(
-          50 + Math.random() * (containerWidth - 100),
-          -100 - (index * 100),
-          width,
-          height,
-          {
-              ...bodyOptions,
-              render: {
-                  sprite: {
-                      texture: img.src,
-                      xScale: 1,
-                      yScale: 1
-                  }
-              }
-          }
-      );
-  });
-
-  const mouse = Mouse.create(render.canvas);
-  const mouseConstraint = MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: {
-          stiffness: 0.1,
-          damping: 0.1,
-          render: {
-              visible: false,
-          }
-      }
-  });
-
-  // Track mouse state
-  let isMouseInContainer = false;
-  let isDragging = false;
-
-  // Store the original mouse position update function
-  const originalMousePositionUpdate = mouse.mouseup.bind(mouse);
-
-  // Override mouse position update
-  mouse.mouseup = function() {
-      if (!isMouseInContainer) {
-          // If outside container, release the constraint
-          mouseConstraint.constraint.bodyB = null;
-          isDragging = false;
-          return;
-      }
-      originalMousePositionUpdate();
-  };
-
-  // Mouse enter handler
-  container.addEventListener('mouseenter', () => {
-      isMouseInContainer = true;
-  });
-
-  container.addEventListener('mouseleave', () => {
-      isMouseInContainer = false;
-      if (isDragging) {
-          // Smoothly release the constraint
-          mouseConstraint.constraint.stiffness = 0.0001;
-          setTimeout(() => {
-              mouseConstraint.constraint.bodyB = null;
-              mouseConstraint.constraint.stiffness = 0.1;
-              isDragging = false;
-          }, 50);
-      }
-  });
-
-  // Handle mouse events for dragging
-  render.canvas.addEventListener('mousedown', () => {
-      if (isMouseInContainer) {
-          isDragging = true;
-      }
-  });
-
-  render.canvas.addEventListener('mouseup', () => {
-      isDragging = false;
-  });
-
-  let lastTime = 0;
-  let lastMousePos = { x: 0, y: 0 };
+    const wallOptions = {
+        isStatic: true,
+        render: { visible: false },
+        friction: 0,
+        restitution: 0.7,
+        chamfer: { radius: 0 }
+    };
   
-  render.canvas.addEventListener('mousemove', (event) => {
-      const currentTime = performance.now();
-      if (currentTime - lastTime < 16) return;
-      
-      const mousePosition = {
-          x: event.offsetX,
-          y: event.offsetY
-      };
-
-      const mouseVelocity = {
-          x: (mousePosition.x - lastMousePos.x) * 0.1,
-          y: (mousePosition.y - lastMousePos.y) * 0.1
-      };
-
-      const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
-      
-      if (isMouseInContainer && !isDragging) {
-          bodies.forEach(body => {
-              const distance = Vector.magnitude(Vector.sub(body.position, mousePosition));
-              if (distance < 100) {
-                  const force = Vector.mult(
-                      Vector.normalise(Vector.sub(body.position, mousePosition)),
-                      0.05 * (1 - distance/100) * Math.min(3, speed)
-                  );
-                  Body.applyForce(body, body.position, force);
-              }
-          });
-      }
-
-      lastMousePos = mousePosition;
-      lastTime = currentTime;
-  }, { passive: true });
-
-  // Handle window resize
-  let resizeTimeout;
-  window.addEventListener('resize', () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      
-      resizeTimeout = setTimeout(() => {
-          render.canvas.width = container.clientWidth;
-          render.canvas.height = container.clientHeight;
-          
-          const newWidth = container.clientWidth;
-          const newHeight = container.clientHeight;
-          
-          Body.setPosition(walls[0], { 
-              x: newWidth / 2,
-              y: newHeight + 30
-          });
-          Body.setPosition(walls[2], {
-              x: newWidth + 30,
-              y: newHeight / 2
-          });
-      }, 250);
-  });
-
-  const runner = Runner.create({
-      isFixed: true,
-      delta: 1000/60
-  });
-  Runner.run(runner, engine);
-  Render.run(render);
-
-  let resetTimeout;
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const walls = [
+        Bodies.rectangle(containerWidth / 2, containerHeight + 30, containerWidth, 60, wallOptions),
+        Bodies.rectangle(-30, containerHeight / 2, 60, containerHeight, wallOptions),
+        Bodies.rectangle(containerWidth + 30, containerHeight / 2, 60, containerHeight, wallOptions)
+    ];
   
-  function checkReset() {
-      let allBodiesSettled = true;
-      
-      bodies.forEach(body => {
-          if (body.position.y > containerHeight + 100) {
-              Body.setPosition(body, {
-                  x: 50 + Math.random() * (containerWidth - 100),
-                  y: -100
-              });
-              Body.setVelocity(body, { x: 0, y: 0 });
-              Body.setAngularVelocity(body, 0);
-              allBodiesSettled = false;
-          }
-          
-          if (Math.abs(body.velocity.y) > 0.1 || Math.abs(body.velocity.x) > 0.1) {
-              allBodiesSettled = false;
-          }
-      });
-
-      resetTimeout = requestAnimationFrame(checkReset);
+    const bodyOptions = {
+        restitution: 0.7,
+        friction: 0.01,
+        frictionAir: 0.005,
+        density: 0.002,
+        slop: 0,
+        chamfer: { radius: 2 }
+    };
+  
+    const bodies = imgElements.map((img, index) => {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
+        
+        return Bodies.rectangle(
+            50 + Math.random() * (containerWidth - 100),
+            -100 - (index * 100),
+            width,
+            height,
+            {
+                ...bodyOptions,
+                render: {
+                    sprite: {
+                        texture: img.src,
+                        xScale: 1,
+                        yScale: 1
+                    }
+                }
+            }
+        );
+    });
+  
+    const mouse = Mouse.create(render.canvas);
+    const mouseConstraint = MouseConstraint.create(engine, {
+        mouse: mouse,
+        constraint: {
+            stiffness: 0.1,  // Increased stiffness for better control
+            damping: 0.1,    // Added damping for smoother movement
+            render: {
+                visible: false,
+                lineWidth: 1,
+                strokeStyle: 'rgba(255,255,255,0.2)'
+            }
+        }
+    });
+  
+    // Track mouse state
+    let isMouseInContainer = false;
+    let isDragging = false;
+  
+    // Mouse enter handler
+    container.addEventListener('mouseenter', () => {
+        isMouseInContainer = true;
+    });
+  
+    container.addEventListener('mouseleave', () => {
+        isMouseInContainer = false;
+    });
+  
+    // Handle mouse events for dragging
+    render.canvas.addEventListener('mousedown', () => {
+        isDragging = true;
+    });
+  
+    render.canvas.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+  
+    let lastTime = 0;
+    let lastMousePos = { x: 0, y: 0 };
+    
+    render.canvas.addEventListener('mousemove', (event) => {
+        const currentTime = performance.now();
+        if (currentTime - lastTime < 16) return;
+        
+        const mousePosition = {
+            x: event.offsetX,
+            y: event.offsetY
+        };
+  
+        const mouseVelocity = {
+            x: (mousePosition.x - lastMousePos.x) * 0.1,
+            y: (mousePosition.y - lastMousePos.y) * 0.1
+        };
+  
+        const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
+        
+        if (isMouseInContainer && !isDragging) {
+            bodies.forEach(body => {
+                const distance = Vector.magnitude(Vector.sub(body.position, mousePosition));
+                if (distance < 100) {
+                    const force = Vector.mult(
+                        Vector.normalise(Vector.sub(body.position, mousePosition)),
+                        0.05 * (1 - distance/100) * Math.min(3, speed)
+                    );
+                    Body.applyForce(body, body.position, force);
+                }
+            });
+        }
+  
+        lastMousePos = mousePosition;
+        lastTime = currentTime;
+    }, { passive: true });
+  
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        
+        resizeTimeout = setTimeout(() => {
+            render.canvas.width = container.clientWidth;
+            render.canvas.height = container.clientHeight;
+            
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+            
+            Body.setPosition(walls[0], { 
+                x: newWidth / 2,
+                y: newHeight + 30
+            });
+            Body.setPosition(walls[2], {
+                x: newWidth + 30,
+                y: newHeight / 2
+            });
+        }, 250);
+    });
+  
+    const runner = Runner.create({
+        isFixed: true,
+        delta: 1000/60
+    });
+    Runner.run(runner, engine);
+    Render.run(render);
+  
+    let resetTimeout;
+    
+    function checkReset() {
+        let allBodiesSettled = true;
+        
+        bodies.forEach(body => {
+            if (body.position.y > containerHeight + 100) {
+                Body.setPosition(body, {
+                    x: 50 + Math.random() * (containerWidth - 100),
+                    y: -100
+                });
+                Body.setVelocity(body, { x: 0, y: 0 });
+                Body.setAngularVelocity(body, 0);
+                allBodiesSettled = false;
+            }
+            
+            if (Math.abs(body.velocity.y) > 0.1 || Math.abs(body.velocity.x) > 0.1) {
+                allBodiesSettled = false;
+            }
+        });
+  
+        resetTimeout = requestAnimationFrame(checkReset);
+    }
+    resetTimeout = requestAnimationFrame(checkReset);
+  
+    Composite.add(world, [...walls, ...bodies, mouseConstraint]);
+  
+    return () => {
+        Runner.stop(runner);
+        Render.stop(render);
+        cancelAnimationFrame(resetTimeout);
+        World.clear(world, true);
+        Engine.clear(engine);
+        render.canvas.remove();
+        render.canvas = null;
+        render.context = null;
+    };
   }
-  resetTimeout = requestAnimationFrame(checkReset);
-
-  Composite.add(world, [...walls, ...bodies, mouseConstraint]);
-
-  return () => {
-      Runner.stop(runner);
-      Render.stop(render);
-      cancelAnimationFrame(resetTimeout);
-      World.clear(world, true);
-      Engine.clear(engine);
-      render.canvas.remove();
-      render.canvas = null;
-      render.context = null;
-  };
-}
 //---------------------------------------------------TEXT-ANIMATION------------------------------------------------------------//
 const initTextAnimation = (() => {
     const phrases = [
